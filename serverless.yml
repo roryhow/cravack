@@ -55,7 +55,7 @@ functions:
     handler: bin/registerStravaWebhook
     events:
       - httpApi:
-          path: /registerStravaWebhook
+          path: /handleStravaActivityEvent
           method: get
 
   handleStravaActivityEvent:
