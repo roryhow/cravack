@@ -51,20 +51,19 @@ package:
     - ./bin/**
 
 functions:
-  get:
-    handler: bin/get
+  registerStravaWebhook:
+    handler: bin/registerStravaWebhook
     events:
       - httpApi:
-          path: /get/{name}
+          path: /registerStravaWebhook
           method: get
 
-  post:
-    handler: bin/post
+  handleStravaActivityEvent:
+    handler: bin/handleStravaActivityEvent
     events:
       - httpApi:
-          path: /post
+          path: /handleStravaActivityEvent
           method: post
-
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
