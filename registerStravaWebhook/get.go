@@ -18,6 +18,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	challenge := request.QueryStringParameters["hub.challenge"]
 	verifyToken := request.QueryStringParameters["hub.verify_token"]
 
+	// TODO update verifyToken to be environment variable
 	if mode == "subscribe" && verifyToken == "cravack_verify" {
 		validationResponse := ValidationResponse{
 			ChallengeResponse: challenge,
