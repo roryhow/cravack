@@ -16,15 +16,13 @@ service: cravack
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
 # frameworkVersion: "=X.X.X"
-frameworkVersion: ">=1.28.0 <2.0.0"
+frameworkVersion: "2"
 
 provider:
   name: aws
   runtime: go1.x
-
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
+  stage: dev
+  region: eu-central-1
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -47,45 +45,24 @@ provider:
 #    variable1: value1
 
 package:
- individually: true
- exclude:
-   - ./**
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
 
 functions:
   get:
-    handler: bin/getBin
-    package:
-      include:
-        - ./bin/getBin
+    handler: bin/get
     events:
-      - http:
-          path: get/{name}
+      - httpApi:
+          path: /get/{name}
           method: get
-          request:
-            parameter:
-              paths:
-                name: true
-  getquery:
-    handler: bin/getQueryBin
-    package:
-      include:
-        - ./bin/getQueryBin
-    events:
-      - http:
-          path: getQ
-          method: get
-          request:
-            parameters:
-              querystrings:
-                name: true
+
   post:
-    handler: bin/postBin
-    package:
-      include:
-        - ./bin/getQueryBin
+    handler: bin/post
     events:
-      - http:
-          path: post
+      - httpApi:
+          path: /post
           method: post
 
 

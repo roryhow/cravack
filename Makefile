@@ -2,9 +2,8 @@
 
 build:
 	export GO111MODULE=on
-	env GOOS=linux go build -ldflags="-s -w" -o bin/getBin getFolder/getExample.go
-	env GOOS=linux go build -ldflags="-s -w" -o bin/postBin postFolder/postExample.go
-	env GOOS=linux go build -ldflags="-s -w" -o bin/getQueryBin getFolder/getQueryExample.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/get getFolder/getExample.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/post postFolder/postExample.go
 
 clean:
 	rm -rf ./bin ./vendor go.sum
