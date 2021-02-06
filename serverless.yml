@@ -23,6 +23,9 @@ provider:
   runtime: go1.x
   stage: dev
   region: eu-central-1
+  environment:
+    STRAVA_VALIDATION_TOKEN: 'cravack_validation'
+    SLACK_WEBHOOK_URL: ${ssm:cravack_slack_webhook_url}
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
