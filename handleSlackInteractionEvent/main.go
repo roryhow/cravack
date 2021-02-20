@@ -14,6 +14,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	var parsedResponse InteractiveResponse
 	if err := json.Unmarshal([]byte(request.Body), &parsedResponse); err != nil {
 		log.Printf("JSON payload:\n%s", request.Body)
+		log.Printf("Is payload Base64 encoded? %t", request.IsBase64Encoded)
 		log.Printf("Encountered an error when parsing JSON payload: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
