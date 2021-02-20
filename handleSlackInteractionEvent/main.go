@@ -1,6 +1,7 @@
 package main
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"log"
 
@@ -11,10 +12,15 @@ import (
 type InteractiveResponse struct{}
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	decodedRequest, err := b64.StdEncoding.DecodeString(request.Body)
+	if err != nil {
+		log.Printf("Error when decoding request: %s", err)
+		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
+	}
+
 	var parsedResponse InteractiveResponse
-	if err := json.Unmarshal([]byte(request.Body), &parsedResponse); err != nil {
+	if err := json.Unmarshal([]byte(decodedRequest), &parsedResponse); err != nil {
 		log.Printf("JSON payload:\n%s", request.Body)
-		log.Printf("Is payload Base64 encoded? %t", request.IsBase64Encoded)
 		log.Printf("Encountered an error when parsing JSON payload: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
