@@ -22,3 +22,6 @@ vendor
 
 # Remove .http folder, which is used for pinging API endpoints
 .http
+
+# Environment variables from direnv
+.envrc

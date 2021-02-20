@@ -24,8 +24,7 @@ provider:
   stage: dev
   region: eu-central-1
   environment:
-    STRAVA_VALIDATION_TOKEN: 'cravack_validation'
-    SLACK_WEBHOOK_URL: ${ssm:cravack_slack_webhook_url}
+    SLACK_API_KEY: ${ssm:cravack_slack_api_key}
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -66,6 +65,13 @@ functions:
     events:
       - httpApi:
           path: /handleStravaActivityEvent
+          method: post
+
+  handleSlackInteractionEvent:
+    handler: bin/handleSlackInteractionEvent
+    events:
+      - httpApi:
+          path: /handleSlackInteractionEvent
           method: post
 
 #    The following are a few example events you can configure
