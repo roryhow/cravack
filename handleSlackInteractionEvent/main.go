@@ -13,7 +13,8 @@ type InteractiveResponse struct{}
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var parsedResponse InteractiveResponse
 	if err := json.Unmarshal([]byte(request.Body), &parsedResponse); err != nil {
-		log.Printf("encountered error when parsing JSON payload: %s", err)
+		log.Printf("JSON payload:\n%s", request.Body)
+		log.Printf("Encountered an error when parsing JSON payload: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
