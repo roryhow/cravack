@@ -20,7 +20,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	var parsedResponse InteractiveResponse
 	if err := json.Unmarshal([]byte(decodedRequest), &parsedResponse); err != nil {
-		log.Printf("JSON payload:\n%s", request.Body)
+		log.Printf("JSON payload:\n%s", decodedRequest)
 		log.Printf("Encountered an error when parsing JSON payload: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
