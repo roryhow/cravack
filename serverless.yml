@@ -22,7 +22,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STRAVA_USER_AUTH_TABLE}"
 
 package:
   exclude:
@@ -61,7 +61,7 @@ functions:
 
 resources:
   Resources:
-    cravack-strava-authenticated-users:
+    stravaAuthenticatedUsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: ${self:provider.environment.STRAVA_USER_AUTH_TABLE}
@@ -69,24 +69,6 @@ resources:
           -
             AttributeName: "AthleteID"
             AttributeType: "N"
-          -
-            AttributeName: "AthleteUsername"
-            AttributeType: "S"
-          -
-            AttributeName: "TokenType"
-            AttributeType: "S"
-          -
-            AttributeName: "AccessToken"
-            AttributeType: "S"
-          -
-            AttributeName: "TokenExpiresAt"
-            AttributeType: "N"
-          -
-            AttributeName: "TokenExpiresIn"
-            AttributeType: "N"
-          -
-            AttributeName: "RefreshToken"
-            AttributeType: "S"
         KeySchema:
           -
             AttributeName: "AthleteID"
