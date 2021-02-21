@@ -1,31 +1,31 @@
 package main
 
 import (
-	b64 "encoding/base64"
-	"encoding/json"
 	"log"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-type InteractiveResponse struct{}
-
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	decodedRequest, err := b64.StdEncoding.DecodeString(request.Body)
+	req, err := APIGatewayProxyRequestToHTTPRequest(request)
 	if err != nil {
-		log.Printf("Error when decoding request: %s", err)
+		log.Printf("Error when converting Lambda event to HTTP Request: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
-	var parsedResponse InteractiveResponse
-	if err := json.Unmarshal([]byte(decodedRequest), &parsedResponse); err != nil {
-		log.Printf("JSON payload:\n%s", decodedRequest)
-		log.Printf("Encountered an error when parsing JSON payload: %s", err)
+	if err := req.ParseForm(); err != nil {
+		log.Printf("Error when parsing form in HTTP request: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
-	log.Printf("%+v\n", parsedResponse)
+	payload, ok := req.Form["payload"]
+	if !ok || len(payload) < 1 {
+		log.Printf("Missing payload from Slack response")
+		return events.APIGatewayProxyResponse{Body: "Missing payload", StatusCode: 400}, nil
+	}
+
+	log.Printf("Received payload:\n%+v", payload[0])
 	return events.APIGatewayProxyResponse{StatusCode: 200}, nil
 }
 

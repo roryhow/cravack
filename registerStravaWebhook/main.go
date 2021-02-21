@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"os"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -19,7 +20,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	verifyToken := request.QueryStringParameters["hub.verify_token"]
 
 	// TODO update verifyToken to be environment variable
-	if mode == "subscribe" && verifyToken == "cravack_verify" {
+	if mode == "subscribe" && verifyToken == os.Getenv("STRAVA_WEBHOOK_VERIFY_TOKEN") {
 		validationResponse := ValidationResponse{
 			ChallengeResponse: challenge,
 		}
@@ -34,7 +35,6 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}
 
 		log.Printf("Registering handler, returning response:\n" + string(response))
-
 		return events.APIGatewayProxyResponse{Body: string(response), Headers: responseHeaders, StatusCode: 200}, nil
 	}
 

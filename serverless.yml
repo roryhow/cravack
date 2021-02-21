@@ -25,6 +25,9 @@ provider:
   region: eu-central-1
   environment:
     SLACK_API_KEY: ${ssm:cravack_slack_api_key}
+    STRAVA_CLIENT_ID: ${ssm:cravack_strava_client_id}
+    STRAVA_CLIENT_SECRET: ${ssm:cravack_strava_client_secret}
+    STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:cravack_strava_webhook_verify_token}
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -58,6 +61,13 @@ functions:
     events:
       - httpApi:
           path: /handleStravaActivityEvent
+          method: get
+
+  handleStravaAuthenticate:
+    handler: bin/handleStravaAuthenticate
+    events:
+      - httpApi:
+          path: /handleStravaAuthenticate
           method: get
 
   handleStravaActivityEvent:
