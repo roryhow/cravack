@@ -59,6 +59,13 @@ functions:
           path: /handleSlackInteractionEvent
           method: post
 
+  handleSlackEvent:
+    handler: bin/handleSlackEvent
+    events:
+      - httpApi:
+          path: /handleSlackEvent
+          method: post
+
 resources:
   Resources:
     stravaAuthenticatedUsersTable:

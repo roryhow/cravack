@@ -6,6 +6,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/roryhow/cravack/db"
+	"github.com/roryhow/cravack/services"
 )
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -26,7 +28,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	userAuthCode := request.QueryStringParameters["code"]
-	authInfo, err := AuthenticateStravaUser(userAuthCode)
+	authInfo, err := services.AuthenticateStravaUser(userAuthCode)
 	if err != nil {
 		log.Printf("Error when authenticating Strava user:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{
@@ -35,7 +37,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	_, err = PutAuthenticatedUser(authInfo)
+	_, err = db.PutAuthenticatedUser(authInfo)
 	if err != nil {
 		log.Printf("Error when adding authenticated user to database:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{

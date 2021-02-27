@@ -1,13 +1,15 @@
-package main
+package services
 
 import (
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/roryhow/cravack/db"
 )
 
-func AuthenticateStravaUser(userAuthCode string) (*AuthenticatedStravaUser, error) {
+func AuthenticateStravaUser(userAuthCode string) (*db.AuthenticatedStravaUser, error) {
 	clientId := os.Getenv("STRAVA_CLIENT_ID")
 	clientSecret := os.Getenv("STRAVA_CLIENT_SECRET")
 
@@ -31,7 +33,7 @@ func AuthenticateStravaUser(userAuthCode string) (*AuthenticatedStravaUser, erro
 	}
 	defer resp.Body.Close()
 
-	var stravaResponse AuthenticatedStravaUser
+	var stravaResponse db.AuthenticatedStravaUser
 	if err := json.NewDecoder(resp.Body).Decode(&stravaResponse); err != nil {
 		return nil, err
 	}

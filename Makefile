@@ -2,10 +2,11 @@
 
 build:
 	export GO111MODULE=on
-	env GOOS=linux go build -ldflags="-s -w" -o bin/registerStravaWebhook registerStravaWebhook/main.go
-	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaActivityEvent handleStravaActivityEvent/main.go
-	env GOOS=linux go build -ldflags="-s -w" -o bin/handleSlackInteractionEvent handleSlackInteractionEvent/main.go handleSlackInteractionEvent/request.go
-	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaAuthenticate handleStravaAuthenticate/main.go handleStravaAuthenticate/strava_auth.go handleStravaAuthenticate/strava_users_dao.go handleStravaAuthenticate/strava_user.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/registerStravaWebhook handlers/register_strava_webhook.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaActivityEvent handlers/handle_strava_activity_event.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/handleSlackInteractionEvent handlers/handle_slack_interaction_event.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/handleSlackEvent handlers/handle_slack_event.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaAuthenticate handlers/handle_strava_authenticate.go
 
 clean:
 	rm -rf ./bin ./vendor go.sum

@@ -5,10 +5,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/roryhow/cravack/services"
 )
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	req, err := APIGatewayProxyRequestToHTTPRequest(request)
+	req, err := services.APIGatewayProxyRequestToHTTPRequest(request)
 	if err != nil {
 		log.Printf("Error when converting Lambda event to HTTP Request: %s", err)
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
