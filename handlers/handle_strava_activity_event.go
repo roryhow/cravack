@@ -11,17 +11,8 @@ import (
 	"github.com/roryhow/cravack/services"
 )
 
-type StravaEvent struct {
-	ObjectType     string `json:"object_type"`
-	ObjectID       int    `json:"object_id"`
-	AspectType     string `json:"aspect_type"`
-	AthleteID      int    `json:"owner_id" `
-	SubscriptionID int    `json:"subscription_id"`
-	EventTime      int    `json:"event_time"`
-}
-
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var bodyRequest StravaEvent
+	var bodyRequest services.StravaEvent
 	err := json.Unmarshal([]byte(request.Body), &bodyRequest)
 	if err != nil {
 		log.Printf("unable to decode JSON payload")
