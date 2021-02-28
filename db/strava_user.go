@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -11,6 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/pkg/errors"
 )
+
+type StravaRefreshToken struct {
+	TokenType    string `json:"token_type" dynamodbav:":t"`
+	AccessToken  string `json:"access_token" dynamodbav:":a"`
+	ExpiresAt    int    `json:"expires_at" dynamodbav:":ea"`
+	ExpiresIn    int    `json:"expires_int" dynamodbav:":ei"`
+	RefreshToken string `json:"refresh_token" dynamodbav:":r"`
+}
 
 type AuthenticatedStravaUser struct {
 	TokenType     string
@@ -86,24 +95,61 @@ func GetAuthenticatedUser(athleteID int) (*AuthenticatedStravaUser, error) {
 		TableName: aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"AthleteID": {
-				N: aws.String(string(athleteID)),
+				N: aws.String(strconv.Itoa(athleteID)),
 			},
 		},
 	})
 
 	if err != nil {
-		log.Printf("Error when fetching from database")
-		return nil, errors.Wrap(err, "Error when fetching from database")
+		log.Printf("Error when fetching from database\n%s", err.Error())
+		return nil, err
 	}
 
 	stravaUser := AuthenticatedStravaUser{}
 
 	err = dynamodbattribute.UnmarshalMap(result.Item, &stravaUser)
 	if err != nil {
-		errmsg := "Error when unmarshalling result from DB into AuthenticatedStravaUser"
-		log.Printf(errmsg)
-		return nil, errors.Wrap(err, errmsg)
+		log.Printf("Error when unmarshalling result from DB into AuthenticatedStravaUser\n%s", err.Error())
+		return nil, err
 	}
 
 	return &stravaUser, nil
+}
+
+func UpdateStravaUserToken(refreshedUser *StravaRefreshToken, athleteID int) (*AuthenticatedStravaUser, error) {
+	sess := session.Must(session.NewSession())
+	svc := dynamodb.New(sess)
+
+	expr, err := dynamodbattribute.MarshalMap(refreshedUser)
+	if err != nil {
+		log.Printf("Error when marshalling refresh token:\n%s", err.Error())
+		return nil, err
+	}
+
+	input := &dynamodb.UpdateItemInput{
+		ExpressionAttributeValues: expr,
+		TableName:                 aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
+		Key: map[string]*dynamodb.AttributeValue{
+			"AthleteID": {
+				N: aws.String(strconv.Itoa(athleteID)),
+			},
+		},
+		ReturnValues:     aws.String("ALL_NEW"),
+		UpdateExpression: aws.String("set TokenType = :t, AccessToken = :a, ExpiresIn = :ei, ExpiresAt = :ea, RefreshToken = :r"),
+	}
+
+	result, err := svc.UpdateItem(input)
+	if err != nil {
+		log.Printf("Error when user token in database for athelete: %d\n%s", athleteID, err.Error())
+		return nil, err
+	}
+
+	var updatedAthlete AuthenticatedStravaUser
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &updatedAthlete)
+	if err != nil {
+		log.Printf("Error when unmarshalling results from dynamodb update into AuthenticatedStravaUser\n%s", err.Error())
+		return nil, err
+	}
+
+	return &updatedAthlete, nil
 }
