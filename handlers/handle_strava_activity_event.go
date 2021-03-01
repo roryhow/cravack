@@ -19,11 +19,13 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 400}, nil
 	}
 
+	// get the user auth details from the db
 	user, err := db.GetAuthenticatedUser(bodyRequest.AthleteID)
 	if err != nil {
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
+	// if the user token is expird, refresh it
 	if int64(user.ExpiresAt) < time.Now().Unix() {
 		refreshToken, err := services.GetStravaUserRefreshToken(user.RefreshToken)
 		if err != nil {
@@ -37,21 +39,26 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// Fetch the corresponding event from strava api
+	activity, err := services.GetStravaActivityForUser(&bodyRequest, user)
+	if err != nil {
+		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
+	}
+
+	// Send the event to slack
+	services.PostActivityToChannel(activity, user, "cr-cravack-test")
 
 	// marshall the request back into a json response
-	response, err := json.Marshal(&user)
+	response, err := json.Marshal(&activity)
 	if err != nil {
 		log.Printf("unable to parse JSON response")
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
-	log.Printf(string(response))
 	return events.APIGatewayProxyResponse{
 		Body:       string(response),
 		StatusCode: 200,
 		Headers:    map[string]string{"Content-Type": "application/json"},
 	}, nil
-
 }
 
 func main() {

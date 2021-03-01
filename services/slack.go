@@ -3,23 +3,15 @@ package services
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/roryhow/cravack/db"
 	"github.com/slack-go/slack"
 )
 
-func getUsers(api *slack.Client) {
-	users, err := api.GetUsers()
+func postMessageToTest() {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
-	if err != nil {
-		fmt.Printf("Error when getting users: %s\n", err)
-	}
-
-	for _, user := range users {
-		fmt.Printf("%+v\n", user)
-	}
-}
-
-func postMessageToTest(api *slack.Client) {
 	// header
 	headerText := slack.NewTextBlockObject("mrkdwn", "Hi all! :wave:", false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
@@ -66,8 +58,135 @@ func postMessageToTest(api *slack.Client) {
 	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
 }
 
-func main() {
+func getHeaderTextForActivityType(activityType string, name string) string {
+	var a string
+	switch activityType {
+	case "AlpineSki":
+		a = fmt.Sprintf("%s went alpine skiing! :skier:", name)
+	case "BackcountrySki":
+		a = fmt.Sprintf("%s went canoeing! :canoe:", name)
+	case "Crossfit":
+		a = fmt.Sprintf("%s did some crossfit :runner:", name)
+	case "EBikeRide":
+		a = fmt.Sprintf("%s went on an e-bike ride? What is that? :bicyclist:", name)
+	case "Elliptical":
+		a = fmt.Sprintf("%s went on the elliptical! :runner:", name)
+	case "Golf":
+		a = fmt.Sprintf("%s played some golf :golfer:", name)
+	case "Handcycle":
+		a = fmt.Sprintf("%s went on their handcycle!", name)
+	case "Hike":
+		a = fmt.Sprintf("%s went for a hike! :hiking_boot:", name)
+	case "IceSkate":
+		a = fmt.Sprintf("%s did some ice skating! :ice_skate:", name)
+	case "InlineSkate":
+		a = fmt.Sprintf("%s did some inline skating! :ice_skate:", name)
+	case "Kayaking":
+		a = fmt.Sprintf("%s did some kite-surfing", name)
+	case "NordicSki":
+		a = fmt.Sprintf("%s did some cross-country skiing! :skier:", name)
+	case "Ride":
+		a = fmt.Sprintf("%s went for a bike ride! :bicyclist:", name)
+	case "RockClimbing":
+		a = fmt.Sprintf("%s went rock climbing! :person_climbing:", name)
+	case "RollerSki":
+		a = fmt.Sprintf("%s went roller skiing! :roller_skate:", name)
+	case "Rowing":
+		a = fmt.Sprintf("%s went rowing! :rowboat:", name)
+	case "Run":
+		a = fmt.Sprintf("%s went for a run! :runner:", name)
+	case "Sail":
+		a = fmt.Sprintf("%s went sailing! :sailboat:", name)
+	case "Skateboard":
+		a = fmt.Sprintf("%s went skateboarding! Cowabunga! :skateboard:", name)
+	case "Snowboard":
+		a = fmt.Sprintf("It's not as fun as skiing, but %s went snowboarding! :showboarder:", name)
+	case "Snowshoe":
+		a = fmt.Sprintf("%s went snowshoeing :snowflake:", name)
+	case "Soccer":
+		a = fmt.Sprintf("%s played some football! :soccer:", name)
+	case "StairStepper":
+		a = fmt.Sprintf("%s went stepping on some stairs! :foot:", name)
+	case "StandUpPaddling":
+		a = fmt.Sprintf("%s did some SUP boarding! :surfer:", name)
+	case "Surfing":
+		a = fmt.Sprintf("%s caught some gnarly waves and went surfing! :surfer:", name)
+	case "Swin":
+		a = fmt.Sprintf("%s went for a swim! :swimmer:", name)
+	case "Velomobile":
+		a = fmt.Sprintf("%s went on their velomobile... what is that? :shrug:", name)
+	case "VirtualRide":
+		a = fmt.Sprintf("%s went for a virtual ride! :bicyclist:", name)
+	case "VirtualRun":
+		a = fmt.Sprintf("%s went for a virtual run! Is that online... or? :globe_with_meridians::runner:", name)
+	case "Walk":
+		a = fmt.Sprintf("%s went for a leisurely walk :walking:", name)
+	case "WeightTraining":
+		a = fmt.Sprintf("%s is feeling the gains because they just went weight training! :weight_lifter:", name)
+	case "Wheelchair":
+		a = fmt.Sprintf("%s knows that sitting doesn't always have to be still because they just went on their wheelchair! :person_in_manual_wheelchair:", name)
+	case "Windsurf":
+		a = fmt.Sprintf("%s just went windsurfing! :surfer:", name)
+	case "Workout":
+		a = fmt.Sprintf("%s just did a workout! :runner:", name)
+	case "Yoga":
+		a = fmt.Sprintf("%s is feeling zen because they just did some yoga :person_in_lotus_position:", name)
+	}
+
+	return a
+}
+
+func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID string) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
-	postMessageToTest(api)
+	headerText := slack.NewTextBlockObject(
+		"mrkdwn",
+		getHeaderTextForActivityType(activity.Type, user.FirstName),
+		false,
+		false,
+	)
+	headerSection := slack.NewSectionBlock(headerText, nil, nil)
+
+	distanceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Distance:*\n%dkm", activity.Distance/1000), false, false)
+
+	duration, _ := time.ParseDuration(fmt.Sprintf("%ds", activity.ElapsedTime))
+	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:*\n%s", duration.String()), false, false)
+
+	avgSpeedInKPH := activity.AverageSpeed * 3.6
+	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:*\n%fkph", avgSpeedInKPH), false, false)
+
+	elevationChangeText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Change:*\n%dm", activity.TotalElevationGain), false, false)
+
+	statsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{distanceText, durationText, paceText, elevationChangeText}, nil)
+
+	divider := slack.NewDividerBlock()
+
+	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
+	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
+	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
+	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
+
+	authoriseBtn := slack.ButtonBlockElement{
+		Type: slack.METButton,
+		Text: authoriseBtnTxt,
+		URL:  stravaAuthUrl,
+	}
+	authoriseActionBlock := slack.NewActionBlock("", authoriseBtn)
+
+	channelID, timestamp, err := api.PostMessage(
+		channelID,
+		slack.MsgOptionBlocks(
+			headerSection,
+			statsSection,
+			divider,
+			authoriseActionBlock,
+		),
+	)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
+	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
+
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -260,6 +261,23 @@ func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, err
 
 }
 
-func GetStravaActivityForUser(event *StravaEvent, user *db.AuthenticatedStravaUser) {
+func GetStravaActivityForUser(event *StravaEvent, user *db.AuthenticatedStravaUser) (*StravaEventFull, error) {
+	client := http.DefaultClient
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.strava.com/api/v3/activities/%d", event.ObjectID), nil)
+	if err != nil {
+		log.Printf("Error when building request to strava to fetch activity:\n%s", err.Error())
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", user.AccessToken))
 
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failure when fetching Strava activity")
+	}
+
+	var stravaEventFull StravaEventFull
+	if err := json.NewDecoder(resp.Body).Decode(&stravaEventFull); err != nil {
+		return nil, err
+	}
+
+	return &stravaEventFull, nil
 }

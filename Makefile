@@ -9,7 +9,7 @@ build:
 	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaAuthenticate handlers/handle_strava_authenticate.go
 
 clean:
-	rm -rf ./bin ./vendor go.sum
+	rm -rf ./bin ./vendor
 
 deploy: clean build
 	sls deploy --verbose
