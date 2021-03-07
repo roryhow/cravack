@@ -19,13 +19,18 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 400}, nil
 	}
 
+	// Don't handle anything other than creates for now
+	if bodyRequest.AspectType != "create" {
+		return events.APIGatewayProxyResponse{StatusCode: 204}, nil
+	}
+
 	// get the user auth details from the db
 	user, err := db.GetAuthenticatedUser(bodyRequest.AthleteID)
 	if err != nil {
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
-	// if the user token is expird, refresh it
+	// if the user token has expired, refresh it
 	if int64(user.ExpiresAt) < time.Now().Unix() {
 		refreshToken, err := services.GetStravaUserRefreshToken(user.RefreshToken)
 		if err != nil {

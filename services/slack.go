@@ -59,7 +59,7 @@ func postMessageToTest() {
 }
 
 func getHeaderTextForActivityType(activityType string, name string) string {
-	var a string
+	a := fmt.Sprintf("%s did a workout!", name)
 	switch activityType {
 	case "AlpineSki":
 		a = fmt.Sprintf("%s went alpine skiing! :skier:", name)
@@ -139,6 +139,7 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID string) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
+	// Title text
 	headerText := slack.NewTextBlockObject(
 		"mrkdwn",
 		getHeaderTextForActivityType(activity.Type, user.FirstName),
@@ -147,36 +148,57 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 	)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
-	distanceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Distance:*\n%dkm", activity.Distance/1000), false, false)
+	subHeaderText := slack.NewTextBlockObject(
+		"mrkdwn",
+		fmt.Sprintf(":speech_balloon: %s", activity.Name),
+		false,
+		false,
+	)
+	subHeaderSection := slack.NewContextBlock("", subHeaderText)
 
+	// Components for stats block
+	distanceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Distance travelled:* %.2fkm", activity.Distance/1000), false, false)
 	duration, _ := time.ParseDuration(fmt.Sprintf("%ds", activity.ElapsedTime))
-	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:*\n%s", duration.String()), false, false)
+	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:* %s", duration.String()), false, false)
+	avgSpeedInKPH := activity.AverageSpeed * 3.6 // convert average speed to KPH
+	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:* %.2fkm/h", avgSpeedInKPH), false, false)
+	elevationChangeText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Change:* %.2fm", activity.TotalElevationGain), false, false)
+	statsSectionFields := []*slack.TextBlockObject{
+		distanceText,
+		durationText,
+		paceText,
+		elevationChangeText,
+	}
+	statsSection := slack.NewSectionBlock(nil, statsSectionFields, nil)
 
-	avgSpeedInKPH := activity.AverageSpeed * 3.6
-	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:*\n%fkph", avgSpeedInKPH), false, false)
-
-	elevationChangeText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Change:*\n%dm", activity.TotalElevationGain), false, false)
-
-	statsSection := slack.NewSectionBlock(nil, []*slack.TextBlockObject{distanceText, durationText, paceText, elevationChangeText}, nil)
-
+	// Divider - purely visual
 	divider := slack.NewDividerBlock()
 
+	// Action buttons block
 	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
 	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
 	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
 	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
-
 	authoriseBtn := slack.ButtonBlockElement{
 		Type: slack.METButton,
 		Text: authoriseBtnTxt,
 		URL:  stravaAuthUrl,
 	}
-	authoriseActionBlock := slack.NewActionBlock("", authoriseBtn)
+	fullActivityBtnText := slack.NewTextBlockObject("plain_text", "View full activity on Strava", false, false)
+	stravaFullActivityUrl := fmt.Sprintf("https://www.strava.com/activities/%d", activity.ID)
+	fullActivityBtn := slack.ButtonBlockElement{
+		Type: slack.METButton,
+		Text: fullActivityBtnText,
+		URL:  stravaFullActivityUrl,
+	}
+	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn, authoriseBtn)
 
-	channelID, timestamp, err := api.PostMessage(
+	// Send the message to the channel
+	channelID, _, err := api.PostMessage(
 		channelID,
 		slack.MsgOptionBlocks(
 			headerSection,
+			subHeaderSection,
 			statsSection,
 			divider,
 			authoriseActionBlock,
@@ -186,7 +208,4 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 		fmt.Printf("%s\n", err)
 		return
 	}
-
-	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
-
 }
