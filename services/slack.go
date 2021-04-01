@@ -9,7 +9,7 @@ import (
 	"github.com/slack-go/slack"
 )
 
-func postMessageToTest() {
+func SendSlackConnectMessage() {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
 	// header
@@ -41,7 +41,7 @@ func postMessageToTest() {
 	authoriseActionBlock := slack.NewActionBlock("", authoriseBtn)
 
 	channelID, timestamp, err := api.PostMessage(
-		"cr-cravack-test",
+		"cr-half-marathon",
 		slack.MsgOptionBlocks(
 			headerSection,
 			subheaderSection,

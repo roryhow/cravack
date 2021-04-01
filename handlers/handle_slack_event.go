@@ -9,12 +9,13 @@ import (
 )
 
 type SlackEvent struct {
-	Token        string `json:"token"`
-	TeamID       string `json:"team_id"`
-	APIAppID     string `json:"api_app_id"`
-	EventContext string `json:"event_context"`
-	EventID      string `json:"event_time"`
-	EventType    string `json:"type"`
+	Token        string                 `json:"token"`
+	TeamID       string                 `json:"team_id"`
+	APIAppID     string                 `json:"api_app_id"`
+	EventContext string                 `json:"event_context"`
+	EventID      string                 `json:"event_id"`
+	EventType    string                 `json:"type"`
+	Event        map[string]interface{} `json:"event"`
 }
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
