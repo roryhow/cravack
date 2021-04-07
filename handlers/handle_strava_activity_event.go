@@ -19,11 +19,6 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 400}, nil
 	}
 
-	// Don't handle anything other than creates for now
-	if bodyRequest.AspectType != "create" {
-		return events.APIGatewayProxyResponse{StatusCode: 204}, nil
-	}
-
 	// get the user auth details from the db
 	user, err := db.GetAuthenticatedUser(bodyRequest.AthleteID)
 	if err != nil {
