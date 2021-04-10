@@ -162,12 +162,12 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:* %s", duration.String()), false, false)
 	avgSpeedInKPH := activity.AverageSpeed * 3.6 // convert average speed to KPH
 	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:* %.2fkm/h", avgSpeedInKPH), false, false)
-	elevationChangeText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Change:* %.2fm", activity.TotalElevationGain), false, false)
+	elevationGainText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Gain:* %.2fm", activity.TotalElevationGain), false, false)
 	statsSectionFields := []*slack.TextBlockObject{
 		distanceText,
 		durationText,
 		paceText,
-		elevationChangeText,
+		elevationGainText,
 	}
 	statsSection := slack.NewSectionBlock(nil, statsSectionFields, nil)
 
