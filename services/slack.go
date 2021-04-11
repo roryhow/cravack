@@ -138,11 +138,11 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 }
 
 func metersPerSecondToMinutesPerKm(speed float64) string {
-	pace := speed / (60 * 1000)
-	leftover := math.Mod(pace, 1)
-	minutes := int(pace - leftover)
-	seconds := int(math.Round(leftover * 60))
-	return fmt.Sprintf("%d:%d", minutes, seconds)
+	total := 1000 / (speed * 60)
+	remainder := math.Mod(total, 1)
+	remainderInSeconds := remainder * 60
+	floor := total - remainder
+	return fmt.Sprintf("%.0fm %.0fs", floor, remainderInSeconds)
 }
 
 func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID string) {
@@ -171,7 +171,7 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:* %s", duration.String()), false, false)
 
 	minsPerKm := metersPerSecondToMinutesPerKm(activity.AverageSpeed)
-	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:* %smin/km", minsPerKm), false, false)
+	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Average Speed:* %smin / km", minsPerKm), false, false)
 	elevationGainText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Gain:* %.2fm", activity.TotalElevationGain), false, false)
 	statsSectionFields := []*slack.TextBlockObject{
 		distanceText,
