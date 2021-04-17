@@ -11,6 +11,7 @@
 - [x] Bot provides link in channel upon entry to "subscribe"
 
 ### Nice to have
+- [ ] Proper dev environment, migrate actual users to production environment
 - [ ] Basic DB to remember channels to post into, can be any channel within any organisation
 - [ ] Interaction to choose with bot which event types to post
 - [ ] Record past history of events, to be able to update messages
