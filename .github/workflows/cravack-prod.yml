@@ -1,4 +1,4 @@
-name: Build & deploy cravack
+name: Build, Deploy Cravack (prod)
 
 on:
   push:
