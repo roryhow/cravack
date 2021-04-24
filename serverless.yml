@@ -8,10 +8,10 @@ provider:
   stage: ${opt:stage,'dev'}
   region: eu-central-1
   environment:
-    SLACK_API_KEY: ${self:custom.slackApiKey.${self.provider.stage}}
-    STRAVA_CLIENT_ID: ${self:custom.stravaClientId.${self.provider.stage}}
-    STRAVA_CLIENT_SECRET: ${self:custom.stravaClientSecret.${self.provider.stage}}
-    STRAVA_WEBHOOK_VERIFY_TOKEN: ${self:custom.stravaWebhookVerifyToken.${self.provider.stage}}
+    SLACK_API_KEY: ${ssm:/cravack/${self:provider.stage}/slack-api-key}
+    STRAVA_CLIENT_ID: ${ssm:/cravack/${self:provider.stage}/strava-client-id}
+    STRAVA_CLIENT_SECRET: ${ssm:/cravack/${self:provider.stage}/strava-client-secret}
+    STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:/cravack/${self:provider.stage}/strava-webhook-verify-token}
     STRAVA_USER_AUTH_TABLE: "cravack-strava-authenticated-users-${self:provider.stage}"
   iamRoleStatements:
     - Effect: Allow
@@ -23,23 +23,6 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STRAVA_USER_AUTH_TABLE}"
-
-custom:
-  stages:
-    - dev
-    - prod
-  slackApiKey:
-    dev: ${ssm:/cravack/dev/slack-api-key}
-    prod: ${ssm:/cravack/prod/slack-api-key}
-  stravaClientId:
-    dev: ${ssm:/cravack/dev/strava-client-id}
-    prod: ${ssm:/cravack/prod/strava-client-id}
-  stravaClientSecret:
-    dev: ${ssm:/cravack/dev/strava-client-secret}
-    prod: ${ssm:/cravack/prod/strava-client-secret}
-  stravaWebhookVerifyToken:
-    dev: ${ssm:/cravack/dev/strava-webhook-verify-token}
-    prod: ${ssm:/cravack/prod/strava-webhook-verify-token}
 
 package:
   exclude:
