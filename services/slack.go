@@ -2,19 +2,57 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"math"
+	"net/url"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/roryhow/cravack/db"
 	"github.com/slack-go/slack"
 )
 
-func SendSlackConnectMessage() {
-	api := slack.New(os.Getenv("SLACK_API_KEY"))
+type SlackSlashCommand struct {
+	Token          string `form:"token"`
+	TeamID         string `form:"team_id"`
+	TeamDomain     string `form:"team_domain"`
+	EnterpriseID   string `form:"enterprise_id"`
+	EnterpriseName string `form:"enterprise_name"`
+	ChannelID      string `form:"channel_id"`
+	ChannelName    string `form:"channel_name"`
+	UserID         string `form:"user_id"`
+	UserName       string `form:"user_name"`
+	Command        string `form:"command"`
+	Text           string `form:"text"`
+	ResponseURL    string `form:"response_url"`
+	TriggerID      string `form:"trigger_id"`
+	APIAppID       string `form:"api_app_id"`
+}
 
+/*
+   Creates a new SlackSlashCommand struct from an array of URL values.
+   It uses the reflection API to fill all fields of the struct dynamically.
+   I am assuming that this is poor Golang practice, due to risk of runtime panic.
+*/
+func NewSlashCommandFromForm(form *url.Values) *SlackSlashCommand {
+	s := SlackSlashCommand{}
+	t := reflect.TypeOf(s)
+	v := reflect.ValueOf(&s).Elem()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("form")
+		formFieldName := form.Get(tag)
+		v.FieldByName(field.Name).SetString(formFieldName)
+	}
+
+	return &s
+}
+
+func SendSlackConnectMessage(host string, slashCommand *SlackSlashCommand) {
 	// header
-	headerText := slack.NewTextBlockObject("mrkdwn", "Hi all! :wave:", false, false)
+	headerText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("Hi @%s :wave:", slashCommand.UserName), false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
 	// subheader
@@ -29,10 +67,14 @@ func SendSlackConnectMessage() {
 	// Authorise button
 	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
 
-	// TODO establish this from request to lambda rather than hardcode
-	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
+	authCallbackUrl := fmt.Sprintf("https://%s/handleStravaAuthenticate", host)
 	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
-	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
+	stravaAuthUrl := fmt.Sprintf(
+		"https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read&state=%s",
+		cravackClientID,
+		authCallbackUrl,
+		fmt.Sprintf("%s,%s,%s,%s,%s", slashCommand.UserID, slashCommand.UserName, slashCommand.ChannelID, slashCommand.TeamID, slashCommand.EnterpriseID),
+	)
 
 	authoriseBtn := slack.ButtonBlockElement{
 		Type: slack.METButton,
@@ -41,22 +83,23 @@ func SendSlackConnectMessage() {
 	}
 	authoriseActionBlock := slack.NewActionBlock("", authoriseBtn)
 
-	channelID, timestamp, err := api.PostMessage(
-		"cr-half-marathon",
-		slack.MsgOptionBlocks(
-			headerSection,
-			subheaderSection,
-			divider,
-			bodySection,
-			authoriseActionBlock,
-		),
-	)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		return
+	msg := slack.WebhookMessage{
+		Blocks: &slack.Blocks{
+			BlockSet: []slack.Block{
+				headerSection,
+				subheaderSection,
+				divider,
+				bodySection,
+				authoriseActionBlock,
+			},
+		},
 	}
 
-	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
+	err := slack.PostWebhook(slashCommand.ResponseURL, &msg)
+	if err != nil {
+		log.Printf("Error when sending Slack connect message: %s\n", err.Error())
+		return
+	}
 }
 
 func getHeaderTextForActivityType(activityType string, name string) string {
@@ -145,7 +188,7 @@ func metersPerSecondToMinutesPerKm(speed float64) string {
 	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
 }
 
-func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID string) {
+func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID, host string) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
 	// Title text
@@ -186,7 +229,7 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 
 	// Action buttons block
 	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
-	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
+	authCallbackUrl := fmt.Sprintf("https://%s/handleStravaAuthenticate", host)
 	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
 	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
 	authoriseBtn := slack.ButtonBlockElement{

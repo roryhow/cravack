@@ -49,8 +49,14 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
+	host := request.Headers["host"]
+	if len(host) <= 0 {
+		log.Println("Host missing in request header, unable to post to channel")
+		return events.APIGatewayProxyResponse{Body: "Host missing in header", StatusCode: 500}, nil
+	}
+
 	// Send the event to slack
-	services.PostActivityToChannel(activity, user, "cr-half-marathon")
+	services.PostActivityToChannel(activity, user, "cr-half-marathon", host)
 
 	// marshall the request back into a json response
 	response, err := json.Marshal(&activity)

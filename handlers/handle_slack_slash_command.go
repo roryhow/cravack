@@ -20,11 +20,15 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
-	log.Printf("Received Slack event:\n%s", req)
+	host := req.Header["Host"]
+	if len(host) <= 0 {
+		log.Printf("Host header required in order to form callback")
+		return events.APIGatewayProxyResponse{StatusCode: 500}, nil
+	}
 
-	services.SendSlackConnectMessage()
-
-	return events.APIGatewayProxyResponse{StatusCode: 200}, nil
+	slashCommand := services.NewSlashCommandFromForm(&req.Form)
+	services.SendSlackConnectMessage(host[0], slashCommand)
+	return events.APIGatewayProxyResponse{StatusCode: 204}, nil
 }
 
 func main() {
