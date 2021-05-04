@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"net/url"
 	"os"
@@ -50,7 +49,7 @@ func NewSlashCommandFromForm(form *url.Values) *SlackSlashCommand {
 	return &s
 }
 
-func SendSlackConnectMessage(host string, slashCommand *SlackSlashCommand) {
+func (slashCommand *SlackSlashCommand) GetStravaConnectResponse(host string) (*slack.WebhookMessage, error) {
 	// header
 	headerText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("Hi @%s :wave:", slashCommand.UserName), false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
@@ -95,11 +94,7 @@ func SendSlackConnectMessage(host string, slashCommand *SlackSlashCommand) {
 		},
 	}
 
-	err := slack.PostWebhook(slashCommand.ResponseURL, &msg)
-	if err != nil {
-		log.Printf("Error when sending Slack connect message: %s\n", err.Error())
-		return
-	}
+	return &msg, nil
 }
 
 func getHeaderTextForActivityType(activityType string, name string) string {
@@ -188,7 +183,7 @@ func metersPerSecondToMinutesPerKm(speed float64) string {
 	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
 }
 
-func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID, host string) {
+func PostActivityToChannel(activity *StravaEventFull, user *db.StravaUser, channelID, host string) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
 	// Title text

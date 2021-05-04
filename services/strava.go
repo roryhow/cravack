@@ -202,7 +202,7 @@ type StravaEvent struct {
 	EventTime      int    `json:"event_time"`
 }
 
-func AuthenticateStravaUser(userAuthCode string) (*db.AuthenticatedStravaUser, error) {
+func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 	clientId := os.Getenv("STRAVA_CLIENT_ID")
 	clientSecret := os.Getenv("STRAVA_CLIENT_SECRET")
 
@@ -226,7 +226,7 @@ func AuthenticateStravaUser(userAuthCode string) (*db.AuthenticatedStravaUser, e
 	}
 	defer resp.Body.Close()
 
-	var stravaResponse db.AuthenticatedStravaUser
+	var stravaResponse db.StravaUser
 	if err := json.NewDecoder(resp.Body).Decode(&stravaResponse); err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, err
 
 }
 
-func GetStravaActivityForUser(event *StravaEvent, user *db.AuthenticatedStravaUser) (*StravaEventFull, error) {
+func GetStravaActivityForUser(event *StravaEvent, user *db.StravaUser) (*StravaEventFull, error) {
 	client := http.DefaultClient
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.strava.com/api/v3/activities/%d", event.ObjectID), nil)
 	if err != nil {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -27,8 +28,14 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	slashCommand := services.NewSlashCommandFromForm(&req.Form)
-	services.SendSlackConnectMessage(host[0], slashCommand)
-	return events.APIGatewayProxyResponse{StatusCode: 204}, nil
+	msg, _ := slashCommand.GetStravaConnectResponse(host[0])
+
+	response, _ := json.Marshal(msg)
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Body:       string(response),
+		Headers:    map[string]string{"Content-Type": "application/json"},
+	}, nil
 }
 
 func main() {

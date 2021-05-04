@@ -12,7 +12,7 @@ provider:
     STRAVA_CLIENT_ID: ${ssm:/cravack/${self:provider.stage}/strava-client-id}
     STRAVA_CLIENT_SECRET: ${ssm:/cravack/${self:provider.stage}/strava-client-secret}
     STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:/cravack/${self:provider.stage}/strava-webhook-verify-token}
-    STRAVA_USER_AUTH_TABLE: "cravack-strava-authenticated-users-${self:provider.stage}"
+    CRAVACK_USER_TABLE: "cravack-users-${self:provider.stage}"
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -22,7 +22,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STRAVA_USER_AUTH_TABLE}"
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CRAVACK_USER_TABLE}"
 
 package:
   exclude:
@@ -75,17 +75,17 @@ functions:
 
 resources:
   Resources:
-    stravaAuthenticatedUsersTable:
+    CravackUsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:provider.environment.STRAVA_USER_AUTH_TABLE}
+        TableName: ${self:provider.environment.CRAVACK_USER_TABLE}
         AttributeDefinitions:
           -
-            AttributeName: "AthleteID"
+            AttributeName: "UserID"
             AttributeType: "N"
         KeySchema:
           -
-            AttributeName: "AthleteID"
+            AttributeName: "UserID"
             KeyType: "HASH"
         ProvisionedThroughput:
           ReadCapacityUnits: 1

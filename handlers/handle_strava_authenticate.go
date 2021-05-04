@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -27,8 +28,26 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
+	// State is [UserID,UserName,ChannelID,TeamID,EnterpriseID]
+	state := request.QueryStringParameters["state"]
+	stateSlice := strings.Split(state, ",")
+
+	if len(stateSlice) != 5 {
+		return events.APIGatewayProxyResponse{
+			Body:       "Error when parsing state in authentication step",
+			StatusCode: 500,
+		}, nil
+	}
+	slackUser := db.NewSlackUser(
+		stateSlice[0],
+		stateSlice[1],
+		stateSlice[2],
+		stateSlice[3],
+		stateSlice[4],
+	)
+
 	userAuthCode := request.QueryStringParameters["code"]
-	authInfo, err := services.AuthenticateStravaUser(userAuthCode)
+	stravaUser, err := services.AuthenticateStravaUser(userAuthCode)
 	if err != nil {
 		log.Printf("Error when authenticating Strava user:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{
@@ -37,7 +56,8 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	_, err = db.PutAuthenticatedUser(authInfo)
+	c := db.NewCravackUser(stravaUser, slackUser)
+	_, err = db.PutCravackUser(c)
 	if err != nil {
 		log.Printf("Error when adding authenticated user to database:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{

@@ -25,26 +25,28 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// get the user auth details from the db
-	user, err := db.GetAuthenticatedUser(bodyRequest.AthleteID)
+	cravackUser, err := db.GetAuthenticatedUser(bodyRequest.AthleteID)
 	if err != nil {
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
 
+	stravaUser := cravackUser.StravaUser
+
 	// if the user token has expired, refresh it
-	if int64(user.ExpiresAt) < time.Now().Unix() {
-		refreshToken, err := services.GetStravaUserRefreshToken(user.RefreshToken)
+	if int64(stravaUser.ExpiresAt) < time.Now().Unix() {
+		refreshToken, err := services.GetStravaUserRefreshToken(stravaUser.RefreshToken)
 		if err != nil {
 			return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 		}
 
-		user, err = db.UpdateStravaUserToken(refreshToken, user.AthleteID)
+		stravaUser, err = db.UpdateCravackStravaToken(refreshToken, stravaUser.AthleteID)
 		if err != nil {
 			return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 		}
 	}
 
 	// Fetch the corresponding event from strava api
-	activity, err := services.GetStravaActivityForUser(&bodyRequest, user)
+	activity, err := services.GetStravaActivityForUser(&bodyRequest, stravaUser)
 	if err != nil {
 		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 	}
@@ -56,7 +58,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// Send the event to slack
-	services.PostActivityToChannel(activity, user, "cr-half-marathon", host)
+	services.PostActivityToChannel(activity, stravaUser, "cr-half-marathon", host)
 
 	// marshall the request back into a json response
 	response, err := json.Marshal(&activity)
