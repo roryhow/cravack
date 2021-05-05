@@ -37,7 +37,7 @@ func PutCravackUser(user *CravackUser) (*dynamodb.PutItemOutput, error) {
 
 	input := &dynamodb.PutItemInput{
 		Item:      av,
-		TableName: aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
+		TableName: aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 	}
 	output, err := svc.PutItem(input)
 

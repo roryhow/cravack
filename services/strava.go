@@ -231,7 +231,6 @@ func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 		return nil, err
 	}
 
-	log.Printf("Created user:\n%+v", stravaResponse)
 	return &stravaResponse, nil
 }
 
