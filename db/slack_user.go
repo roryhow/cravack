@@ -1,11 +1,11 @@
 package db
 
 type SlackUser struct {
-	UserID       string `json:"user_id"`
-	UserName     string `json:"user_name"`
-	ChannelID    string `json:"channel_id"`
-	TeamID       string `json:"team_id"`
-	EnterpriseID string `json:"enterprise_id"`
+	UserID       string `json:"user_id" dynamodbav:"UserID"`
+	UserName     string `json:"user_name" dynamodbav:"UserName"`
+	ChannelID    string `json:"channel_id" dyanmodbav:"ChannelID"`
+	TeamID       string `json:"team_id" dynamodbav:"TeamID"`
+	EnterpriseID string `json:"enterprise_id" dynamodbav:"EnterpriseID"`
 }
 
 func NewSlackUser(userID, userName, channelID, teamID, enterpriseID string) *SlackUser {

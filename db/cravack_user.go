@@ -12,9 +12,9 @@ import (
 )
 
 type CravackUser struct {
-	UserID     int         `json:"user_id"`
-	StravaUser *StravaUser `json:"strava_user"`
-	SlackUser  *SlackUser  `json:"slack_user"`
+	UserID     int         `json:"user_id" dynamodbav:"UserID"`
+	StravaUser *StravaUser `json:"strava_user" dynamodbav:"StravaUser"`
+	SlackUser  *SlackUser  `json:"slack_user" dynamodbav:"SlackUser"`
 }
 
 func NewCravackUser(stravaUser *StravaUser, slackUser *SlackUser) *CravackUser {
