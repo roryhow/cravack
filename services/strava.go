@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/roryhow/cravack/db"
 )
 
@@ -202,6 +203,9 @@ type StravaEvent struct {
 	EventTime      int    `json:"event_time"`
 }
 
+// use a single instance of Validate, it caches struct info
+var validate *validator.Validate
+
 func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 	clientId := os.Getenv("STRAVA_CLIENT_ID")
 	clientSecret := os.Getenv("STRAVA_CLIENT_SECRET")
@@ -231,9 +235,14 @@ func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 		return nil, err
 	}
 
+	if err := validate.Struct(stravaResponse); err != nil {
+		return nil, err
+	}
+
 	return &stravaResponse, nil
 }
 
+// Fetch Strava refresh token from Strava API
 func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, error) {
 	clientId := os.Getenv("STRAVA_CLIENT_ID")
 	clientSecret := os.Getenv("STRAVA_CLIENT_SECRET")
@@ -260,6 +269,10 @@ func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, err
 
 	var stravaResponse db.StravaRefreshToken
 	if err := json.NewDecoder(resp.Body).Decode(&stravaResponse); err != nil {
+		return nil, err
+	}
+
+	if err := validate.Struct(stravaResponse); err != nil {
 		return nil, err
 	}
 

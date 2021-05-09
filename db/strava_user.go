@@ -8,20 +8,20 @@ import (
 
 type StravaRefreshToken struct {
 	TokenType    string `json:"token_type" dynamodbav:":t"`
-	AccessToken  string `json:"access_token" dynamodbav:":a"`
+	AccessToken  string `json:"access_token" dynamodbav:":a" validate:"required"`
 	ExpiresAt    int    `json:"expires_at" dynamodbav:":ea"`
 	ExpiresIn    int    `json:"expires_int" dynamodbav:":ei"`
-	RefreshToken string `json:"refresh_token" dynamodbav:":r"`
+	RefreshToken string `json:"refresh_token" dynamodbav:":r" validate:"required"`
 }
 
 type StravaUser struct {
 	TokenType     string
 	ExpiresAt     int
 	ExpiresIn     int
-	RefreshToken  string
-	AccessToken   string
-	AthleteID     int
-	Username      string
+	RefreshToken  string `validate:"required"`
+	AccessToken   string `validate:"required"`
+	AthleteID     int    `validate:"require"`
+	Username      string `validate:"required"`
 	FirstName     string
 	LastName      string
 	ProfileMedium string
