@@ -10,7 +10,7 @@ type StravaRefreshToken struct {
 	TokenType    string `json:"token_type" dynamodbav:":t"`
 	AccessToken  string `json:"access_token" dynamodbav:":a" validate:"required"`
 	ExpiresAt    int    `json:"expires_at" dynamodbav:":ea"`
-	ExpiresIn    int    `json:"expires_int" dynamodbav:":ei"`
+	ExpiresIn    int    `json:"expires_in" dynamodbav:":ei"`
 	RefreshToken string `json:"refresh_token" dynamodbav:":r" validate:"required"`
 }
 
