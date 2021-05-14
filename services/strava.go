@@ -272,7 +272,7 @@ func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, err
 		return nil, err
 	}
 
-	if err := validate.Struct(stravaResponse); err != nil {
+	if err := validate.Struct(&stravaResponse); err != nil {
 		return nil, err
 	}
 
