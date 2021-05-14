@@ -49,7 +49,7 @@ func GetAuthenticatedUser(athleteID int) (*CravackUser, error) {
 	svc := dynamodb.New(sess)
 
 	result, err := svc.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(os.Getenv("CRAVACK_USER_AUTH_TABLE")),
+		TableName: aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"UserID": {
 				N: aws.String(strconv.Itoa(athleteID)),
@@ -84,7 +84,7 @@ func UpdateCravackStravaToken(refreshedUser *StravaRefreshToken, athleteID int) 
 
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeValues: expr,
-		TableName:                 aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
+		TableName:                 aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"AthleteID": {
 				N: aws.String(strconv.Itoa(athleteID)),
