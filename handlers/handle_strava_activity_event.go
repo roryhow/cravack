@@ -58,7 +58,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// Send the event to slack
-	services.PostActivityToChannel(activity, stravaUser, "cr-half-marathon", host)
+	services.PostActivityToChannel(activity, stravaUser, cravackUser.SlackUser.ChannelID, host)
 
 	// marshall the request back into a json response
 	response, err := json.Marshal(&activity)
