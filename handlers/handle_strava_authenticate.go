@@ -66,9 +66,22 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
+	msgPermalink, err := services.PostCravackAuthenticationSuccess(u)
+
+	if err != nil {
+		log.Printf("Error calling services.PostCravackAutheticationSuccess:\n%+v", err)
+		return events.APIGatewayProxyResponse{
+			Body:       fmt.Sprintf("Error calling services.PostCravackAutheticationSuccess:\n%s", err.Error()),
+			StatusCode: 500,
+		}, nil
+	}
+
+	log.Printf("Posted authentication success to channel, responding with redirect permalink to %s")
 	return events.APIGatewayProxyResponse{
-		Body:       "Authenticated!",
-		StatusCode: 200,
+		StatusCode: 303,
+		Headers: map[string]string{
+			"Location": msgPermalink,
+		},
 	}, nil
 }
 

@@ -72,7 +72,7 @@ func GetAuthenticatedUser(athleteID int) (*CravackUser, error) {
 	return &user, nil
 }
 
-func UpdateCravackStravaToken(refreshedUser *StravaRefreshToken, athleteID int) (*StravaUser, error) {
+func UpdateCravackStravaToken(refreshedUser *StravaRefreshToken, athleteID int) (*CravackUser, error) {
 	sess := session.Must(session.NewSession())
 	svc := dynamodb.New(sess)
 
@@ -86,7 +86,7 @@ func UpdateCravackStravaToken(refreshedUser *StravaRefreshToken, athleteID int) 
 		ExpressionAttributeValues: expr,
 		TableName:                 aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
-			"AthleteID": {
+			"UserID": {
 				N: aws.String(strconv.Itoa(athleteID)),
 			},
 		},
@@ -105,7 +105,7 @@ StravaUser.RefreshToken = :r`),
 		return nil, err
 	}
 
-	var updatedAthlete StravaUser
+	updatedAthlete := CravackUser{}
 	err = dynamodbattribute.UnmarshalMap(result.Attributes, &updatedAthlete)
 	if err != nil {
 		log.Printf("Error when unmarshalling results from dynamodb update into StravaUser\n%s", err.Error())

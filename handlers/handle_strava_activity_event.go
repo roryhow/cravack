@@ -39,7 +39,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 			return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 		}
 
-		stravaUser, err = db.UpdateCravackStravaToken(refreshToken, stravaUser.AthleteID)
+		cravackUser, err = db.UpdateCravackStravaToken(refreshToken, stravaUser.AthleteID)
 		if err != nil {
 			return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
 		}
@@ -58,7 +58,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	// Send the event to slack
-	services.PostActivityToChannel(activity, stravaUser, cravackUser.SlackUser.ChannelID, host)
+	services.PostActivityToChannel(activity, cravackUser, host)
 
 	// marshall the request back into a json response
 	response, err := json.Marshal(&activity)

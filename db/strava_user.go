@@ -20,7 +20,7 @@ type StravaUser struct {
 	ExpiresIn     int
 	RefreshToken  string `validate:"required"`
 	AccessToken   string `validate:"required"`
-	AthleteID     int    `validate:"require"`
+	AthleteID     int    `validate:"required"`
 	Username      string `validate:"required"`
 	FirstName     string
 	LastName      string

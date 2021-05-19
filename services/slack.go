@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"os"
@@ -183,13 +184,13 @@ func metersPerSecondToMinutesPerKm(speed float64) string {
 	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
 }
 
-func PostActivityToChannel(activity *StravaEventFull, user *db.StravaUser, channelID, host string) {
+func PostActivityToChannel(activity *StravaEventFull, user *db.CravackUser, host string) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
 	// Title text
 	headerText := slack.NewTextBlockObject(
 		"mrkdwn",
-		getHeaderTextForActivityType(activity.Type, user.FirstName),
+		getHeaderTextForActivityType(activity.Type, "@"+user.SlackUser.UserName),
 		false,
 		false,
 	)
@@ -209,7 +210,8 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.StravaUser, chann
 	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:* %s", duration.String()), false, false)
 
 	minsPerKm := metersPerSecondToMinutesPerKm(activity.AverageSpeed)
-	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Pace:* %s / km", minsPerKm), false, false)
+	paceDuration, _ := time.ParseDuration(minsPerKm)
+	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Pace:* %s / km", paceDuration.String()), false, false)
 	elevationGainText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Gain:* %.2fm", activity.TotalElevationGain), false, false)
 	statsSectionFields := []*slack.TextBlockObject{
 		distanceText,
@@ -242,8 +244,8 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.StravaUser, chann
 	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn, authoriseBtn)
 
 	// Send the message to the channel
-	channelID, _, err := api.PostMessage(
-		channelID,
+	_, _, err := api.PostMessage(
+		user.SlackUser.ChannelID,
 		slack.MsgOptionBlocks(
 			headerSection,
 			subHeaderSection,
@@ -253,7 +255,32 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.StravaUser, chann
 		),
 	)
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		log.Printf("%s\n", err)
 		return
 	}
+}
+
+func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	channel, ts, err := api.PostMessage(
+		user.SlackUser.ChannelID,
+		slack.MsgOptionText(
+			fmt.Sprintf("<@%s> has authorised Cravack to post to this channel. Welcome! :wave:", user.SlackUser.UserName),
+			false,
+		),
+		slack.MsgOptionAsUser(true),
+	)
+
+	if err != nil {
+		log.Printf("Error when posting mesage to Slack:\n%s", err)
+		return "", err
+	}
+
+	pp := &slack.PermalinkParameters{
+		Channel: channel,
+		Ts:      ts,
+	}
+	permalink, err := api.GetPermalink(pp)
+	return permalink, err
 }

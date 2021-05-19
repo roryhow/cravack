@@ -235,7 +235,9 @@ func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 		return nil, err
 	}
 
-	if err := validate.Struct(stravaResponse); err != nil {
+	validate = validator.New()
+	if err := validate.Struct(&stravaResponse); err != nil {
+		log.Printf("Error when validating Strava user:\n%+v", stravaResponse)
 		return nil, err
 	}
 
@@ -272,6 +274,8 @@ func GetStravaUserRefreshToken(refreshToken string) (*db.StravaRefreshToken, err
 		return nil, err
 	}
 
+	log.Printf("Strava Response: %+v", stravaResponse)
+	validate = validator.New()
 	if err := validate.Struct(&stravaResponse); err != nil {
 		return nil, err
 	}

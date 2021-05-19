@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http/httputil"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -26,7 +27,11 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{Body: "Missing payload", StatusCode: 400}, nil
 	}
 
-	log.Printf("Received payload:\n%+v", payload[0])
+	text, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
+	}
+	log.Println(string(text))
 	return events.APIGatewayProxyResponse{StatusCode: 200}, nil
 }
 
