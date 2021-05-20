@@ -13,6 +13,7 @@ provider:
     STRAVA_CLIENT_SECRET: ${ssm:/cravack/${self:provider.stage}/strava-client-secret}
     STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:/cravack/${self:provider.stage}/strava-webhook-verify-token}
     CRAVACK_USER_TABLE: "cravack-users-${self:provider.stage}"
+    CRAVACK_ACTIVITY_QUEUE: "cravack-activity-queue-${self:provider.stage}"
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -22,7 +23,18 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CRAVACK_USER_TABLE}"
+      Resource:
+        Fn::GetAtt:
+          - CravackUsersTable
+          - Arn
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+        - sqs:ReceiveMessage
+      Resource:
+        Fn::GetAtt:
+          - CravackActivityQueue
+          - Arn
 
 package:
   exclude:
@@ -51,6 +63,15 @@ functions:
       - httpApi:
           path: /handleStravaActivityEvent
           method: post
+
+  handleCravackQueueEvent:
+    handler: bin/handleCravackQueueEvent
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - CravackActivityQueue
+              - Arn
 
   handleSlackInteractionEvent:
     handler: bin/handleSlackInteractionEvent
@@ -90,3 +111,8 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+
+    CravackActivityQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.CRAVACK_ACTIVITY_QUEUE}
