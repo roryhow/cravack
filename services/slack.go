@@ -176,17 +176,7 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 	return a
 }
 
-func metersPerSecondToMinutesPerKm(speed float64) string {
-	total := 1000 / (speed * 60)
-	remainder := math.Mod(total, 1)
-	remainderInSeconds := remainder * 60
-	floor := total - remainder
-	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
-}
-
-func PostActivityToChannel(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
-	api := slack.New(os.Getenv("SLACK_API_KEY"))
-
+func buildStravaActivityMessage(activity *db.StravaEventFull, user *db.CravackUser) slack.MsgOption {
 	// Title text
 	headerText := slack.NewTextBlockObject(
 		"mrkdwn",
@@ -234,16 +224,47 @@ func PostActivityToChannel(activity *db.StravaEventFull, user *db.CravackUser) (
 	}
 	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn)
 
+	return slack.MsgOptionBlocks(
+		headerSection,
+		subHeaderSection,
+		statsSection,
+		divider,
+		authoriseActionBlock,
+	)
+}
+
+func metersPerSecondToMinutesPerKm(speed float64) string {
+	total := 1000 / (speed * 60)
+	remainder := math.Mod(total, 1)
+	remainderInSeconds := remainder * 60
+	floor := total - remainder
+	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
+}
+
+func UpdateActivityMessage(activity *db.StravaEventFull, user *db.CravackUser, event *db.CravackActivityEvent) (string, string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	activityMsgOption := buildStravaActivityMessage(activity, user)
+
+	// Send the message to the channel
+	channelId, ts, _, err := api.UpdateMessage(
+		event.SlackChannelId,
+		event.SlackMessageTimestamp,
+		activityMsgOption,
+	)
+
+	return channelId, ts, err
+}
+
+func PostActivityToChannel(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	activityMsgOption := buildStravaActivityMessage(activity, user)
+
 	// Send the message to the channel
 	return api.PostMessage(
 		user.SlackUser.ChannelID,
-		slack.MsgOptionBlocks(
-			headerSection,
-			subHeaderSection,
-			statsSection,
-			divider,
-			authoriseActionBlock,
-		),
+		activityMsgOption,
 	)
 }
 

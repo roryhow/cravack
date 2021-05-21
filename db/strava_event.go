@@ -186,9 +186,9 @@ type StravaEventFull struct {
 
 type StravaEvent struct {
 	ObjectType     string `json:"object_type" dynamodbav:"ObjectType"`
-	ObjectID       int    `json:"object_id" dynamodbav:"ObjectID"`
+	ObjectID       int    `json:"object_id" dynamodbav:"EventID"`
 	AspectType     string `json:"aspect_type" dynamodbav:"AspectType"`
-	AthleteID      int    `json:"owner_id" dynamodbav:"AthleteID"`
+	AthleteID      int    `json:"owner_id" dynamodbav:"UserID"`
 	SubscriptionID int    `json:"subscription_id" dynamodbav:"SubscriptionID"`
 	EventTime      int    `json:"event_time" dynamodbav:"EventTime"`
 }

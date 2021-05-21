@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/pkg/errors"
 	"github.com/roryhow/cravack/db"
 	"github.com/roryhow/cravack/services"
 )
@@ -31,9 +30,9 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 		EventTime:      messageAttributeToInt(message, "EventTime"),
 	}
 
-	// Don't handle anything other than creates for now
-	if stravaEvent.AspectType != "create" {
-		return errors.New("Only create events are handled by Cravack for now.")
+	// Don't handle anything other than creates and updates for now
+	if stravaEvent.AspectType != "create" && stravaEvent.AspectType != "update" {
+		return nil
 	}
 
 	// get the user auth details from the db
@@ -63,14 +62,29 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 		return err
 	}
 
-	// Send the event to slack
-	_, ts, err := services.PostActivityToChannel(activity, cravackUser)
-	if err != nil {
-		return err
+	var channelId, ts string
+	if stravaEvent.AspectType == "create" {
+		// Send the event to slack
+		channelId, ts, err = services.PostActivityToChannel(activity, cravackUser)
+		if err != nil {
+			return err
+		}
+	} else if stravaEvent.AspectType == "update" {
+		// Get the previous event, update the slack message
+		cravackActivityEvent, err := services.GetCravackActivityEvent(stravaEvent)
+		if err != nil {
+			return err
+		}
+
+		// FIXME I don't think this is working
+		channelId, ts, err = services.UpdateActivityMessage(activity, cravackUser, cravackActivityEvent)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Post event to DynamoDB
-	_, err = services.PutStravaActivityEvent(stravaEvent, ts)
+	// Create a database entry for the actibity event
+	_, err = services.PutStravaActivityEvent(stravaEvent, channelId, ts)
 
 	return err
 }
