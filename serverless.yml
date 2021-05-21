@@ -13,8 +13,21 @@ provider:
     STRAVA_CLIENT_SECRET: ${ssm:/cravack/${self:provider.stage}/strava-client-secret}
     STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:/cravack/${self:provider.stage}/strava-webhook-verify-token}
     CRAVACK_USER_TABLE: "cravack-users-${self:provider.stage}"
+    CRAVACK_EVENT_TABLE: "cravack-events-${self:provider.stage}"
     CRAVACK_ACTIVITY_QUEUE: "cravack-activity-queue-${self:provider.stage}"
   iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        Fn::GetAtt:
+          - CravackEventsTable
+          - Arn
     - Effect: Allow
       Action:
         - dynamodb:Query
@@ -29,8 +42,7 @@ provider:
           - Arn
     - Effect: Allow
       Action:
-        - sqs:SendMessage
-        - sqs:ReceiveMessage
+        - sqs:*
       Resource:
         Fn::GetAtt:
           - CravackActivityQueue
@@ -108,6 +120,28 @@ resources:
           -
             AttributeName: "UserID"
             KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    CravackEventsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CRAVACK_EVENT_TABLE}
+        AttributeDefinitions:
+          -
+            AttributeName: "EventID"
+            AttributeType: "N"
+          -
+            AttributeName: "UserID"
+            AttributeType: "N"
+        KeySchema:
+          -
+            AttributeName: "UserID"
+            KeyType: "HASH"
+          -
+            AttributeName: "EventID"
+            KeyType: "RANGE"
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1

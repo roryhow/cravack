@@ -184,7 +184,7 @@ func metersPerSecondToMinutesPerKm(speed float64) string {
 	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
 }
 
-func PostActivityToChannel(activity *StravaEventFull, user *db.CravackUser, host string) {
+func PostActivityToChannel(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
 	// Title text
@@ -224,16 +224,7 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.CravackUser, host
 	// Divider - purely visual
 	divider := slack.NewDividerBlock()
 
-	// Action buttons block
-	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
-	authCallbackUrl := fmt.Sprintf("https://%s/handleStravaAuthenticate", host)
-	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
-	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
-	authoriseBtn := slack.ButtonBlockElement{
-		Type: slack.METButton,
-		Text: authoriseBtnTxt,
-		URL:  stravaAuthUrl,
-	}
+	// CTA to Strava
 	fullActivityBtnText := slack.NewTextBlockObject("plain_text", "View full activity on Strava", false, false)
 	stravaFullActivityUrl := fmt.Sprintf("https://www.strava.com/activities/%d", activity.ID)
 	fullActivityBtn := slack.ButtonBlockElement{
@@ -241,10 +232,10 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.CravackUser, host
 		Text: fullActivityBtnText,
 		URL:  stravaFullActivityUrl,
 	}
-	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn, authoriseBtn)
+	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn)
 
 	// Send the message to the channel
-	_, _, err := api.PostMessage(
+	return api.PostMessage(
 		user.SlackUser.ChannelID,
 		slack.MsgOptionBlocks(
 			headerSection,
@@ -254,10 +245,6 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.CravackUser, host
 			authoriseActionBlock,
 		),
 	)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
 }
 
 func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {

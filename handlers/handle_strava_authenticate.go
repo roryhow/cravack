@@ -57,7 +57,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	u := db.NewCravackUser(stravaUser, slackUser)
-	_, err = db.PutCravackUser(u)
+	_, err = services.PutCravackUser(u)
 	if err != nil {
 		log.Printf("Error when adding authenticated user to database:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{
