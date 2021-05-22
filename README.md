@@ -10,7 +10,7 @@ This project is built using Go, and is centred around a collection of serverless
 This architecture was created to minimise AWS running costs. To this end, all services are selected due to the fact that they exist within the AWS free tier. Thus, Cravack does not have any monthly billing costs (assuming that it doesn't start to receive high amounts of traffic). The primary AWS services used for Cravack are as follows:
 - *AWS Lambda:* Used for each of the functions that are called when Cravack is interacted with.
 - *AWS DynamoDB:* Used to store Cravack user data, and Cravack users' activity data.
-- *AWS SQS:* Used to asynchronously process event data which can be published from any source
+- *AWS SQS:* Used to asynchronously process event data which can be published from any source. There is also a dead letter queue which stores events are unprocessable by Cravack.
 - *AWS Parameter Store:*: Used to store application secrets for Strava and Slack.
 
 ### Slack
