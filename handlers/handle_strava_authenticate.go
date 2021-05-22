@@ -76,7 +76,6 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	log.Printf("Posted authentication success to channel, responding with redirect permalink to %s")
 	return events.APIGatewayProxyResponse{
 		StatusCode: 303,
 		Headers: map[string]string{
