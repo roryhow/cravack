@@ -154,7 +154,7 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 	case "Swin":
 		a = fmt.Sprintf("%s went for a swim! :swimmer:", name)
 	case "Velomobile":
-		a = fmt.Sprintf("%s went on their velomobile... whatever that is? :shrug:", name)
+		a = fmt.Sprintf("%s went on their velomobile! :bicyclist:", name)
 	case "VirtualRide":
 		a = fmt.Sprintf("%s went for a virtual ride! :bicyclist:", name)
 	case "VirtualRun":
@@ -170,7 +170,7 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 	case "Workout":
 		a = fmt.Sprintf("%s just did a workout! :runner:", name)
 	case "Yoga":
-		a = fmt.Sprintf("%s is feeling zen because they just did some yoga :person_in_lotus_position:", name)
+		a = fmt.Sprintf("%s just did some yoga :person_in_lotus_position:", name)
 	}
 
 	return a
