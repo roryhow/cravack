@@ -102,7 +102,7 @@ StravaUser.RefreshToken = :r`),
 	return &updatedAthlete, nil
 }
 
-func PutStravaActivityEvent(event *db.StravaEvent, slackChannelId, slackMsgTs string) (*dynamodb.PutItemOutput, error) {
+func PutCravackActivityEvent(event *db.StravaEvent, slackChannelId, slackMsgTs string) (*dynamodb.PutItemOutput, error) {
 	sess := session.Must(session.NewSession())
 	svc := dynamodb.New(sess)
 
@@ -145,6 +145,36 @@ func GetCravackActivityEvent(event *db.StravaEvent) (*db.CravackActivityEvent, e
 
 	cravackEvent := db.CravackActivityEvent{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &cravackEvent)
+	if err != nil {
+		log.Printf("Error when unmarshalling result from DB into StravaUser\n%s", err.Error())
+		return nil, err
+	}
+
+	return &cravackEvent, nil
+}
+
+func DeleteCravackActivityEvent(event *db.StravaEvent) (*db.CravackActivityEvent, error) {
+	sess := session.Must(session.NewSession())
+	svc := dynamodb.New(sess)
+
+	result, err := svc.DeleteItem(&dynamodb.DeleteItemInput{
+		TableName: aws.String(os.Getenv("CRAVACK_EVENT_TABLE")),
+		Key: map[string]*dynamodb.AttributeValue{
+			"UserID": {
+				N: aws.String(strconv.Itoa(event.AthleteID)),
+			},
+			"EventID": {
+				N: aws.String(strconv.Itoa(event.ObjectID)),
+			},
+		},
+		ReturnValues: aws.String("ALL_OLD"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	cravackEvent := db.CravackActivityEvent{}
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &cravackEvent)
 	if err != nil {
 		log.Printf("Error when unmarshalling result from DB into StravaUser\n%s", err.Error())
 		return nil, err

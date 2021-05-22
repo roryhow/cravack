@@ -241,6 +241,18 @@ func metersPerSecondToMinutesPerKm(speed float64) string {
 	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
 }
 
+func PostActivityMessage(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	activityMsgOption := buildStravaActivityMessage(activity, user)
+
+	// Send the message to the channel
+	return api.PostMessage(
+		user.SlackUser.ChannelID,
+		activityMsgOption,
+	)
+}
+
 func UpdateActivityMessage(activity *db.StravaEventFull, user *db.CravackUser, event *db.CravackActivityEvent) (string, string, error) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
@@ -256,18 +268,17 @@ func UpdateActivityMessage(activity *db.StravaEventFull, user *db.CravackUser, e
 	return channelId, ts, err
 }
 
-func PostActivityToChannel(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
+func DeleteActivityMessage(event *db.CravackActivityEvent) error {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
-	activityMsgOption := buildStravaActivityMessage(activity, user)
-
-	// Send the message to the channel
-	return api.PostMessage(
-		user.SlackUser.ChannelID,
-		activityMsgOption,
+	// Delete the message from the channel
+	_, _, err := api.DeleteMessage(
+		event.SlackChannelId,
+		event.SlackMessageTimestamp,
 	)
-}
 
+	return err
+}
 func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -30,8 +32,20 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 		EventTime:      messageAttributeToInt(message, "EventTime"),
 	}
 
-	// Don't handle anything other than creates and updates for now
-	if stravaEvent.AspectType != "create" && stravaEvent.AspectType != "update" {
+	if stravaEvent.AspectType == "delete" {
+		// delete the cravack event, return the data before it was deleted
+		cravackActivityEvent, err := services.DeleteCravackActivityEvent(stravaEvent)
+		if err != nil {
+			return err
+		}
+
+		// Use the activity event information to delete from Slack
+		err = services.DeleteActivityMessage(cravackActivityEvent)
+		if err != nil {
+			return err
+		}
+
+		// delete completed successfully - nothing left to do
 		return nil
 	}
 
@@ -62,13 +76,16 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 		return err
 	}
 
-	var channelId, ts string
 	if stravaEvent.AspectType == "create" {
 		// Send the event to slack
-		channelId, ts, err = services.PostActivityToChannel(activity, cravackUser)
+		channelId, ts, err := services.PostActivityMessage(activity, cravackUser)
 		if err != nil {
 			return err
 		}
+
+		// Create a database entry for the activity event
+		_, err = services.PutCravackActivityEvent(stravaEvent, channelId, ts)
+		return err
 	} else if stravaEvent.AspectType == "update" {
 		// Get the previous event, update the slack message
 		cravackActivityEvent, err := services.GetCravackActivityEvent(stravaEvent)
@@ -76,17 +93,17 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 			return err
 		}
 
-		// FIXME I don't think this is working
-		channelId, ts, err = services.UpdateActivityMessage(activity, cravackUser, cravackActivityEvent)
+		// Update the existing activity message in Slack
+		channelId, ts, err := services.UpdateActivityMessage(activity, cravackUser, cravackActivityEvent)
 		if err != nil {
 			return err
 		}
+		// Create a database entry for the actibity event
+		_, err = services.PutCravackActivityEvent(stravaEvent, channelId, ts)
+		return err
 	}
 
-	// Create a database entry for the actibity event
-	_, err = services.PutStravaActivityEvent(stravaEvent, channelId, ts)
-
-	return err
+	return errors.New(fmt.Sprintf("Unknown AspectType %s for Strava Event %+v", stravaEvent.AspectType, stravaEvent))
 }
 
 func Handler(sqsEvent events.SQSEvent) error {
@@ -97,12 +114,11 @@ func Handler(sqsEvent events.SQSEvent) error {
 		if eventSource == "strava" {
 			err := handleStravaEventMessage(message.MessageAttributes) // not handling errors for now
 			if err != nil {
+				log.Println(err.Error())
 				return err
 			}
 		}
 	}
-
-	log.Println("All SQS events handled successfully")
 	return nil
 }
 
