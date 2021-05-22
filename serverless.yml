@@ -15,6 +15,7 @@ provider:
     CRAVACK_USER_TABLE: "cravack-users-${self:provider.stage}"
     CRAVACK_EVENT_TABLE: "cravack-events-${self:provider.stage}"
     CRAVACK_ACTIVITY_QUEUE: "cravack-activity-queue-${self:provider.stage}"
+    CRAVACK_DEAD_LETTER_QUEUE: "cravack-activity-dead-letter-queue-${self:provider.stage}"
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -46,6 +47,13 @@ provider:
       Resource:
         Fn::GetAtt:
           - CravackActivityQueue
+          - Arn
+    - Effect: Allow
+      Action:
+        - sqs:*
+      Resource:
+        Fn::GetAtt:
+          - CravackActivityDeadLetterQueue
           - Arn
 
 package:
@@ -150,3 +158,14 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: ${self:provider.environment.CRAVACK_ACTIVITY_QUEUE}
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - CravackActivityDeadLetterQueue
+              - "Arn"
+        maxReceiveCount: 3
+
+    CravackActivityDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.CRAVACK_DEAD_LETTER_QUEUE}
