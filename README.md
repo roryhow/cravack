@@ -51,7 +51,7 @@ You can contribute to the development of Cravack in a few ways:
 - [x] Install slack APIs Golang
 - [x] Create endpoints to handle interactions from slack, via messages etc.
 - [x] Create database that stores users authentication credentials, and refreshes when outdated
-- [ ] Upon subscribing, bot posts events into a set channel when a user records an event.
+- [x] Upon subscribing, bot posts events into a set channel when a user records an event.
 - [x] Fetch Strava activity data for user when activity is received via webhook
 - [x] Bot provides link in channel upon entry to "subscribe"
 
