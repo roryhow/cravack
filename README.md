@@ -11,6 +11,7 @@ This architecture was created to minimise AWS running costs. To this end, all se
 - *AWS Lambda:* Used for each of the functions that are called when Cravack is interacted with.
 - *AWS DynamoDB:* Used to store Cravack user data, and Cravack users' activity data.
 - *AWS SQS:* Used to asynchronously process event data which can be published from any source
+- *AWS Parameter Store:*: Used to store application secrets for Strava and Slack.
 
 ### Slack
 This application consists of `n` slack applications, where `n` is the number of environments that you would wish to use for running this service. Currently, Cravack uses 2 environments.
@@ -36,7 +37,14 @@ If you want to run this application for yourself, you will need the following:
 - A Slack bot (following the template supplied in this repo)
 - A Strava application
 - The serverless framework
-- [nvm](https://github.com/nvm-sh/nvm). I have found that the latest version of node doesn't work with serverless right now, so I am using node V14 LTS.
+- [nvm](https://github.com/nvm-sh/nvm). The latest version of node doesn't work with serverless right now, so I am using node V14 LTS.
+
+You will also need to add parameters into your AWS parameter store in order for your application to work. These are the following:
+- /cravack/<environment>/slack-api-key
+- /cravack/<environment>/strava-client-id
+- /cravack/<environment>/strava-client-secret
+- /cravack/<environment>/strava-webhook-verify-token
+These are relatively self explanatory. You can find each of the values needed from the respective slack / strava apps that you create.
 
 You can then deploy this application by running `make`. It's that easy!
 
