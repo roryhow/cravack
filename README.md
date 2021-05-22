@@ -60,7 +60,7 @@ You can contribute to the development of Cravack in a few ways:
 - [x] Database to remember channels to post into, can be any channel within any organisation
 - [x] Record past history of events, to be able to update messages
 - [x] Post message only shown to user when they have authenticated
-- [ ] Include slack bot template file in repository.
+- [x] Include slack bot template file in repository.
 
 ### Nice to have
 - [ ] Unit tests for business logic areas of the application
