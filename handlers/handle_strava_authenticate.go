@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -27,8 +28,26 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
+	// State is [UserID,UserName,ChannelID,TeamID,EnterpriseID]
+	state := request.QueryStringParameters["state"]
+	stateSlice := strings.Split(state, ",")
+
+	if len(stateSlice) != 5 {
+		return events.APIGatewayProxyResponse{
+			Body:       "Error when parsing state in authentication step",
+			StatusCode: 500,
+		}, nil
+	}
+	slackUser := db.NewSlackUser(
+		stateSlice[0],
+		stateSlice[1],
+		stateSlice[2],
+		stateSlice[3],
+		stateSlice[4],
+	)
+
 	userAuthCode := request.QueryStringParameters["code"]
-	authInfo, err := services.AuthenticateStravaUser(userAuthCode)
+	stravaUser, err := services.AuthenticateStravaUser(userAuthCode)
 	if err != nil {
 		log.Printf("Error when authenticating Strava user:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{
@@ -37,7 +56,8 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	_, err = db.PutAuthenticatedUser(authInfo)
+	u := db.NewCravackUser(stravaUser, slackUser)
+	_, err = services.PutCravackUser(u)
 	if err != nil {
 		log.Printf("Error when adding authenticated user to database:\n%s", err.Error())
 		return events.APIGatewayProxyResponse{
@@ -46,9 +66,21 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
+	msgPermalink, err := services.PostCravackAuthenticationSuccess(u)
+
+	if err != nil {
+		log.Printf("Error calling services.PostCravackAutheticationSuccess:\n%+v", err)
+		return events.APIGatewayProxyResponse{
+			Body:       fmt.Sprintf("Error calling services.PostCravackAutheticationSuccess:\n%s", err.Error()),
+			StatusCode: 500,
+		}, nil
+	}
+
 	return events.APIGatewayProxyResponse{
-		Body:       "Authenticated!",
-		StatusCode: 200,
+		StatusCode: 303,
+		Headers: map[string]string{
+			"Location": msgPermalink,
+		},
 	}, nil
 }
 

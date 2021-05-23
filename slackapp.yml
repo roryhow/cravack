@@ -1,0 +1,42 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+display_information:
+  name: Cravack
+  description: A connector between Slack and Strava
+  background_color: "#0d0f1c"
+features:
+  bot_user:
+    display_name: Cravack
+    always_online: false
+  slash_commands:
+    - command: /cravack
+      url: <your_application_host>/handleSlackSlashCommand
+      description: Interact with Cravack
+      usage_hint: connect, disconnect, info
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - chat:write
+      - groups:read
+      - groups:write
+      - im:read
+      - users:read
+      - users:read.email
+      - im:write
+      - groups:history
+      - commands
+settings:
+  event_subscriptions:
+    request_url: <your_application_host>/handleSlackEvent
+    bot_events:
+      - app_mention
+  interactivity:
+    is_enabled: true
+    request_url: <your_application_host>/handleSlackInteractionEvent
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  is_hosted: false
+

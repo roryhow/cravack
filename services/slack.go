@@ -2,37 +2,79 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"math"
+	"net/url"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/roryhow/cravack/db"
 	"github.com/slack-go/slack"
 )
 
-func SendSlackConnectMessage() {
-	api := slack.New(os.Getenv("SLACK_API_KEY"))
+type SlackSlashCommand struct {
+	Token          string `form:"token"`
+	TeamID         string `form:"team_id"`
+	TeamDomain     string `form:"team_domain"`
+	EnterpriseID   string `form:"enterprise_id"`
+	EnterpriseName string `form:"enterprise_name"`
+	ChannelID      string `form:"channel_id"`
+	ChannelName    string `form:"channel_name"`
+	UserID         string `form:"user_id"`
+	UserName       string `form:"user_name"`
+	Command        string `form:"command"`
+	Text           string `form:"text"`
+	ResponseURL    string `form:"response_url"`
+	TriggerID      string `form:"trigger_id"`
+	APIAppID       string `form:"api_app_id"`
+}
 
+/*
+   Creates a new SlackSlashCommand struct from an array of URL values.
+   It uses the reflection API to fill all fields of the struct dynamically.
+   I am assuming that this is poor Golang practice, due to risk of runtime panic.
+*/
+func NewSlashCommandFromForm(form *url.Values) *SlackSlashCommand {
+	s := SlackSlashCommand{}
+	t := reflect.TypeOf(s)
+	v := reflect.ValueOf(&s).Elem()
+
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("form")
+		formFieldName := form.Get(tag)
+		v.FieldByName(field.Name).SetString(formFieldName)
+	}
+
+	return &s
+}
+
+func (slashCommand *SlackSlashCommand) GetStravaConnectResponse(host string) (*slack.WebhookMessage, error) {
 	// header
-	headerText := slack.NewTextBlockObject("mrkdwn", "Hi all! :wave:", false, false)
+	headerText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("Hi @%s :wave:", slashCommand.UserName), false, false)
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
 	// subheader
-	subheaderText := slack.NewTextBlockObject("mrkdwn", "Thanks for inviting me into your secret running club. I'm the bot that will hook your Strava activity into this channel :runner::bicyclist::swimmer:", false, false)
+	subheaderText := slack.NewTextBlockObject("mrkdwn", "I'm Cravack - I'll make sure your Strava activities also get posted into this channel :runner::bicyclist::swimmer:", false, false)
 	subheaderSection := slack.NewSectionBlock(subheaderText, nil, nil)
 
 	divider := slack.NewDividerBlock()
 
-	bodyText := slack.NewTextBlockObject("mrkdwn", "To be able to see your activity in this channel, you'll need to authorise the Cravack application to access your Strava account. You can do that by clicking the button below :point_down:", false, false)
+	bodyText := slack.NewTextBlockObject("mrkdwn", "For this to work, you'll need to authorise the Cravack application to access your Strava account. You can do that by clicking the button below :point_down:", false, false)
 	bodySection := slack.NewSectionBlock(bodyText, nil, nil)
 
 	// Authorise button
 	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
 
-	// TODO establish this from request to lambda rather than hardcode
-	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
+	authCallbackUrl := fmt.Sprintf("https://%s/handleStravaAuthenticate", host)
 	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
-	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
+	stravaAuthUrl := fmt.Sprintf(
+		"https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read&state=%s",
+		cravackClientID,
+		authCallbackUrl,
+		fmt.Sprintf("%s,%s,%s,%s,%s", slashCommand.UserID, slashCommand.UserName, slashCommand.ChannelID, slashCommand.TeamID, slashCommand.EnterpriseID),
+	)
 
 	authoriseBtn := slack.ButtonBlockElement{
 		Type: slack.METButton,
@@ -41,22 +83,35 @@ func SendSlackConnectMessage() {
 	}
 	authoriseActionBlock := slack.NewActionBlock("", authoriseBtn)
 
-	channelID, timestamp, err := api.PostMessage(
-		"cr-half-marathon",
-		slack.MsgOptionBlocks(
-			headerSection,
-			subheaderSection,
-			divider,
-			bodySection,
-			authoriseActionBlock,
-		),
-	)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		return
+	msg := slack.WebhookMessage{
+		Blocks: &slack.Blocks{
+			BlockSet: []slack.Block{
+				headerSection,
+				subheaderSection,
+				divider,
+				bodySection,
+				authoriseActionBlock,
+			},
+		},
 	}
 
-	fmt.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
+	return &msg, nil
+}
+
+func (slashCommand *SlackSlashCommand) GetDeauthorizeCravackResponse(host string) (*slack.WebhookMessage, error) {
+	msg := slack.WebhookMessage{
+		Text: "Your data will no longer be posted to this channel, and your user data has been deleted from Cravack servers. You can reconnect to Cravack by running the command `/cravack connect`",
+	}
+
+	return &msg, nil
+}
+
+func (slashCommand *SlackSlashCommand) GetUnknownCommandResponse(host string) (*slack.WebhookMessage, error) {
+	msg := slack.WebhookMessage{
+		Text: "Sorry, it seems you ran a command I can't handle. You can interact with Cravack by running the commands `/cravack connect` or `/cravack disconnect`",
+	}
+
+	return &msg, nil
 }
 
 func getHeaderTextForActivityType(activityType string, name string) string {
@@ -115,7 +170,7 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 	case "Swin":
 		a = fmt.Sprintf("%s went for a swim! :swimmer:", name)
 	case "Velomobile":
-		a = fmt.Sprintf("%s went on their velomobile... whatever that is? :shrug:", name)
+		a = fmt.Sprintf("%s went on their velomobile! :bicyclist:", name)
 	case "VirtualRide":
 		a = fmt.Sprintf("%s went for a virtual ride! :bicyclist:", name)
 	case "VirtualRun":
@@ -131,27 +186,17 @@ func getHeaderTextForActivityType(activityType string, name string) string {
 	case "Workout":
 		a = fmt.Sprintf("%s just did a workout! :runner:", name)
 	case "Yoga":
-		a = fmt.Sprintf("%s is feeling zen because they just did some yoga :person_in_lotus_position:", name)
+		a = fmt.Sprintf("%s just did some yoga :person_in_lotus_position:", name)
 	}
 
 	return a
 }
 
-func metersPerSecondToMinutesPerKm(speed float64) string {
-	total := 1000 / (speed * 60)
-	remainder := math.Mod(total, 1)
-	remainderInSeconds := remainder * 60
-	floor := total - remainder
-	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
-}
-
-func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStravaUser, channelID string) {
-	api := slack.New(os.Getenv("SLACK_API_KEY"))
-
+func buildStravaActivityMessage(activity *db.StravaEventFull, user *db.CravackUser) slack.MsgOption {
 	// Title text
 	headerText := slack.NewTextBlockObject(
 		"mrkdwn",
-		getHeaderTextForActivityType(activity.Type, user.FirstName),
+		getHeaderTextForActivityType(activity.Type, "@"+user.SlackUser.UserName),
 		false,
 		false,
 	)
@@ -171,7 +216,8 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 	durationText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Duration:* %s", duration.String()), false, false)
 
 	minsPerKm := metersPerSecondToMinutesPerKm(activity.AverageSpeed)
-	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Pace:* %s / km", minsPerKm), false, false)
+	paceDuration, _ := time.ParseDuration(minsPerKm)
+	paceText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Pace:* %s / km", paceDuration.String()), false, false)
 	elevationGainText := slack.NewTextBlockObject("mrkdwn", fmt.Sprintf("*Elevation Gain:* %.2fm", activity.TotalElevationGain), false, false)
 	statsSectionFields := []*slack.TextBlockObject{
 		distanceText,
@@ -184,16 +230,7 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 	// Divider - purely visual
 	divider := slack.NewDividerBlock()
 
-	// Action buttons block
-	authoriseBtnTxt := slack.NewTextBlockObject("plain_text", "Authorise Cravack to Strava", false, false)
-	authCallbackUrl := "https://unepe1p44k.execute-api.eu-central-1.amazonaws.com/handleStravaAuthenticate"
-	cravackClientID := os.Getenv("STRAVA_CLIENT_ID")
-	stravaAuthUrl := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&approval_prompt=force&scope=read,activity:read", cravackClientID, authCallbackUrl)
-	authoriseBtn := slack.ButtonBlockElement{
-		Type: slack.METButton,
-		Text: authoriseBtnTxt,
-		URL:  stravaAuthUrl,
-	}
+	// CTA to Strava
 	fullActivityBtnText := slack.NewTextBlockObject("plain_text", "View full activity on Strava", false, false)
 	stravaFullActivityUrl := fmt.Sprintf("https://www.strava.com/activities/%d", activity.ID)
 	fullActivityBtn := slack.ButtonBlockElement{
@@ -201,21 +238,84 @@ func PostActivityToChannel(activity *StravaEventFull, user *db.AuthenticatedStra
 		Text: fullActivityBtnText,
 		URL:  stravaFullActivityUrl,
 	}
-	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn, authoriseBtn)
+	authoriseActionBlock := slack.NewActionBlock("", fullActivityBtn)
+
+	return slack.MsgOptionBlocks(
+		headerSection,
+		subHeaderSection,
+		statsSection,
+		divider,
+		authoriseActionBlock,
+	)
+}
+
+func metersPerSecondToMinutesPerKm(speed float64) string {
+	total := 1000 / (speed * 60)
+	remainder := math.Mod(total, 1)
+	remainderInSeconds := remainder * 60
+	floor := total - remainder
+	return fmt.Sprintf("%.0fm%.0fs", floor, remainderInSeconds)
+}
+
+func PostActivityMessage(activity *db.StravaEventFull, user *db.CravackUser) (string, string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	activityMsgOption := buildStravaActivityMessage(activity, user)
 
 	// Send the message to the channel
-	channelID, _, err := api.PostMessage(
-		channelID,
-		slack.MsgOptionBlocks(
-			headerSection,
-			subHeaderSection,
-			statsSection,
-			divider,
-			authoriseActionBlock,
-		),
+	return api.PostMessage(
+		user.SlackUser.ChannelID,
+		activityMsgOption,
 	)
+}
+
+func UpdateActivityMessage(activity *db.StravaEventFull, user *db.CravackUser, event *db.CravackActivityEvent) (string, string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	activityMsgOption := buildStravaActivityMessage(activity, user)
+
+	// Send the message to the channel
+	channelId, ts, _, err := api.UpdateMessage(
+		event.SlackChannelId,
+		event.SlackMessageTimestamp,
+		activityMsgOption,
+	)
+
+	return channelId, ts, err
+}
+
+func DeleteActivityMessage(event *db.CravackActivityEvent) error {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	// Delete the message from the channel
+	_, _, err := api.DeleteMessage(
+		event.SlackChannelId,
+		event.SlackMessageTimestamp,
+	)
+
+	return err
+}
+func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
+	api := slack.New(os.Getenv("SLACK_API_KEY"))
+
+	channel, ts, err := api.PostMessage(
+		user.SlackUser.ChannelID,
+		slack.MsgOptionText(
+			fmt.Sprintf("<@%s> has authorised Cravack to post their activity data to this channel :muscle:", user.SlackUser.UserName),
+			false,
+		),
+		slack.MsgOptionAsUser(true),
+	)
+
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		return
+		log.Printf("Error when posting mesage to Slack:\n%s", err)
+		return "", err
 	}
+
+	pp := &slack.PermalinkParameters{
+		Channel: channel,
+		Ts:      ts,
+	}
+	permalink, err := api.GetPermalink(pp)
+	return permalink, err
 }

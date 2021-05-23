@@ -7,28 +7,62 @@ provider:
   runtime: go1.x
   stage: ${opt:stage,'dev'}
   region: eu-central-1
+  lambdaHashingVersion: 20201221
   environment:
     SLACK_API_KEY: ${ssm:/cravack/${self:provider.stage}/slack-api-key}
     STRAVA_CLIENT_ID: ${ssm:/cravack/${self:provider.stage}/strava-client-id}
     STRAVA_CLIENT_SECRET: ${ssm:/cravack/${self:provider.stage}/strava-client-secret}
     STRAVA_WEBHOOK_VERIFY_TOKEN: ${ssm:/cravack/${self:provider.stage}/strava-webhook-verify-token}
-    STRAVA_USER_AUTH_TABLE: "cravack-strava-authenticated-users-${self:provider.stage}"
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STRAVA_USER_AUTH_TABLE}"
+    CRAVACK_USER_TABLE: "cravack-users-${self:provider.stage}"
+    CRAVACK_EVENT_TABLE: "cravack-events-${self:provider.stage}"
+    CRAVACK_ACTIVITY_QUEUE: "cravack-activity-queue-${self:provider.stage}"
+    CRAVACK_DEAD_LETTER_QUEUE: "cravack-activity-dead-letter-queue-${self:provider.stage}"
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - CravackEventsTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - CravackUsersTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - sqs:*
+          Resource:
+            Fn::GetAtt:
+              - CravackActivityQueue
+              - Arn
+        - Effect: Allow
+          Action:
+            - sqs:*
+          Resource:
+            Fn::GetAtt:
+              - CravackActivityDeadLetterQueue
+              - Arn
 
 package:
-  exclude:
-    - ./**
-  include:
-    - ./bin/**
+  patterns:
+    - "!./**"
+    - "./bin/**"
 
 functions:
   registerStravaWebhook:
@@ -51,6 +85,15 @@ functions:
       - httpApi:
           path: /handleStravaActivityEvent
           method: post
+
+  handleCravackQueueEvent:
+    handler: bin/handleCravackQueueEvent
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - CravackActivityQueue
+              - Arn
 
   handleSlackInteractionEvent:
     handler: bin/handleSlackInteractionEvent
@@ -75,18 +118,56 @@ functions:
 
 resources:
   Resources:
-    stravaAuthenticatedUsersTable:
+    CravackUsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ${self:provider.environment.STRAVA_USER_AUTH_TABLE}
+        TableName: ${self:provider.environment.CRAVACK_USER_TABLE}
         AttributeDefinitions:
           -
-            AttributeName: "AthleteID"
+            AttributeName: "UserID"
             AttributeType: "N"
         KeySchema:
           -
-            AttributeName: "AthleteID"
+            AttributeName: "UserID"
             KeyType: "HASH"
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+
+    CravackEventsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.CRAVACK_EVENT_TABLE}
+        AttributeDefinitions:
+          -
+            AttributeName: "EventID"
+            AttributeType: "N"
+          -
+            AttributeName: "UserID"
+            AttributeType: "N"
+        KeySchema:
+          -
+            AttributeName: "UserID"
+            KeyType: "HASH"
+          -
+            AttributeName: "EventID"
+            KeyType: "RANGE"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    CravackActivityQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.CRAVACK_ACTIVITY_QUEUE}
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - CravackActivityDeadLetterQueue
+              - "Arn"
+          maxReceiveCount: 3
+
+    CravackActivityDeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.CRAVACK_DEAD_LETTER_QUEUE}

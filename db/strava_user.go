@@ -2,39 +2,32 @@ package db
 
 import (
 	"encoding/json"
-	"log"
-	"os"
-	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/pkg/errors"
 )
 
 type StravaRefreshToken struct {
 	TokenType    string `json:"token_type" dynamodbav:":t"`
-	AccessToken  string `json:"access_token" dynamodbav:":a"`
+	AccessToken  string `json:"access_token" dynamodbav:":a" validate:"required"`
 	ExpiresAt    int    `json:"expires_at" dynamodbav:":ea"`
-	ExpiresIn    int    `json:"expires_int" dynamodbav:":ei"`
-	RefreshToken string `json:"refresh_token" dynamodbav:":r"`
+	ExpiresIn    int    `json:"expires_in" dynamodbav:":ei"`
+	RefreshToken string `json:"refresh_token" dynamodbav:":r" validate:"required"`
 }
 
-type AuthenticatedStravaUser struct {
+type StravaUser struct {
 	TokenType     string
 	ExpiresAt     int
 	ExpiresIn     int
-	RefreshToken  string
-	AccessToken   string
-	AthleteID     int
-	Username      string
+	RefreshToken  string `validate:"required"`
+	AccessToken   string `validate:"required"`
+	AthleteID     int    `validate:"required"`
+	Username      string `validate:"required"`
 	FirstName     string
 	LastName      string
 	ProfileMedium string
 }
 
-func (a *AuthenticatedStravaUser) UnmarshalJSON(buf []byte) error {
+func (a *StravaUser) UnmarshalJSON(buf []byte) error {
 	var tmp struct {
 		TokenType    string `json:"token_type"`
 		ExpiresAt    int    `json:"expires_at"`
@@ -66,90 +59,4 @@ func (a *AuthenticatedStravaUser) UnmarshalJSON(buf []byte) error {
 	a.ProfileMedium = tmp.Athlete.ProfileMedium
 
 	return nil
-}
-
-func PutAuthenticatedUser(user *AuthenticatedStravaUser) (*dynamodb.PutItemOutput, error) {
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-
-	av, err := dynamodbattribute.MarshalMap(user)
-	if err != nil {
-		log.Printf("Error when trying to marshal map")
-		return nil, err
-	}
-
-	input := &dynamodb.PutItemInput{
-		Item:      av,
-		TableName: aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
-	}
-	output, err := svc.PutItem(input)
-
-	return output, err
-}
-
-func GetAuthenticatedUser(athleteID int) (*AuthenticatedStravaUser, error) {
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-
-	result, err := svc.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
-		Key: map[string]*dynamodb.AttributeValue{
-			"AthleteID": {
-				N: aws.String(strconv.Itoa(athleteID)),
-			},
-		},
-	})
-
-	if err != nil {
-		log.Printf("Error when fetching from database\n%s", err.Error())
-		return nil, err
-	}
-
-	stravaUser := AuthenticatedStravaUser{}
-
-	err = dynamodbattribute.UnmarshalMap(result.Item, &stravaUser)
-	if err != nil {
-		log.Printf("Error when unmarshalling result from DB into AuthenticatedStravaUser\n%s", err.Error())
-		return nil, err
-	}
-
-	return &stravaUser, nil
-}
-
-func UpdateStravaUserToken(refreshedUser *StravaRefreshToken, athleteID int) (*AuthenticatedStravaUser, error) {
-	sess := session.Must(session.NewSession())
-	svc := dynamodb.New(sess)
-
-	expr, err := dynamodbattribute.MarshalMap(refreshedUser)
-	if err != nil {
-		log.Printf("Error when marshalling refresh token:\n%s", err.Error())
-		return nil, err
-	}
-
-	input := &dynamodb.UpdateItemInput{
-		ExpressionAttributeValues: expr,
-		TableName:                 aws.String(os.Getenv("STRAVA_USER_AUTH_TABLE")),
-		Key: map[string]*dynamodb.AttributeValue{
-			"AthleteID": {
-				N: aws.String(strconv.Itoa(athleteID)),
-			},
-		},
-		ReturnValues:     aws.String("ALL_NEW"),
-		UpdateExpression: aws.String("set TokenType = :t, AccessToken = :a, ExpiresIn = :ei, ExpiresAt = :ea, RefreshToken = :r"),
-	}
-
-	result, err := svc.UpdateItem(input)
-	if err != nil {
-		log.Printf("Error when user token in database for athelete: %d\n%s", athleteID, err.Error())
-		return nil, err
-	}
-
-	var updatedAthlete AuthenticatedStravaUser
-	err = dynamodbattribute.UnmarshalMap(result.Attributes, &updatedAthlete)
-	if err != nil {
-		log.Printf("Error when unmarshalling results from dynamodb update into AuthenticatedStravaUser\n%s", err.Error())
-		return nil, err
-	}
-
-	return &updatedAthlete, nil
 }

@@ -8,6 +8,7 @@ build:
 	env GOOS=linux go build -ldflags="-s -w" -o bin/handleSlackEvent handlers/handle_slack_event.go
 	env GOOS=linux go build -ldflags="-s -w" -o bin/handleSlackSlashCommand handlers/handle_slack_slash_command.go
 	env GOOS=linux go build -ldflags="-s -w" -o bin/handleStravaAuthenticate handlers/handle_strava_authenticate.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/handleCravackQueueEvent handlers/handle_cravack_queue_event.go
 
 clean:
 	rm -rf ./bin ./vendor
