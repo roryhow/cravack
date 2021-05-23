@@ -56,7 +56,6 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 	}
 
 	stravaUser := cravackUser.StravaUser
-
 	// if the user token has expired, refresh it
 	if int64(stravaUser.ExpiresAt) < time.Now().Unix() {
 		refreshToken, err := services.GetStravaUserRefreshToken(stravaUser.RefreshToken)

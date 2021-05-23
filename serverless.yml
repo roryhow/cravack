@@ -7,6 +7,7 @@ provider:
   runtime: go1.x
   stage: ${opt:stage,'dev'}
   region: eu-central-1
+  lambdaHashingVersion: 20201221
   environment:
     SLACK_API_KEY: ${ssm:/cravack/${self:provider.stage}/slack-api-key}
     STRAVA_CLIENT_ID: ${ssm:/cravack/${self:provider.stage}/strava-client-id}
@@ -16,51 +17,52 @@ provider:
     CRAVACK_EVENT_TABLE: "cravack-events-${self:provider.stage}"
     CRAVACK_ACTIVITY_QUEUE: "cravack-activity-queue-${self:provider.stage}"
     CRAVACK_DEAD_LETTER_QUEUE: "cravack-activity-dead-letter-queue-${self:provider.stage}"
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource:
-        Fn::GetAtt:
-          - CravackEventsTable
-          - Arn
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource:
-        Fn::GetAtt:
-          - CravackUsersTable
-          - Arn
-    - Effect: Allow
-      Action:
-        - sqs:*
-      Resource:
-        Fn::GetAtt:
-          - CravackActivityQueue
-          - Arn
-    - Effect: Allow
-      Action:
-        - sqs:*
-      Resource:
-        Fn::GetAtt:
-          - CravackActivityDeadLetterQueue
-          - Arn
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - CravackEventsTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            Fn::GetAtt:
+              - CravackUsersTable
+              - Arn
+        - Effect: Allow
+          Action:
+            - sqs:*
+          Resource:
+            Fn::GetAtt:
+              - CravackActivityQueue
+              - Arn
+        - Effect: Allow
+          Action:
+            - sqs:*
+          Resource:
+            Fn::GetAtt:
+              - CravackActivityDeadLetterQueue
+              - Arn
 
 package:
-  exclude:
-    - ./**
-  include:
-    - ./bin/**
+  patterns:
+    - "!./**"
+    - "./bin/**"
 
 functions:
   registerStravaWebhook:
