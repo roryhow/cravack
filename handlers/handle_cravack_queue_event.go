@@ -50,7 +50,7 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 	}
 
 	// get the user auth details from the db
-	cravackUser, err := services.GetAuthenticatedUser(stravaEvent.AthleteID)
+	cravackUser, err := services.GetCravackUser(stravaEvent.AthleteID)
 	if err != nil {
 		return err
 	}

@@ -56,12 +56,12 @@ func (slashCommand *SlackSlashCommand) GetStravaConnectResponse(host string) (*s
 	headerSection := slack.NewSectionBlock(headerText, nil, nil)
 
 	// subheader
-	subheaderText := slack.NewTextBlockObject("mrkdwn", "Thanks for inviting me into your secret running club. I'm the bot that will hook your Strava activity into this channel :runner::bicyclist::swimmer:", false, false)
+	subheaderText := slack.NewTextBlockObject("mrkdwn", "I'm Cravack - I'll make sure your Strava activities also get posted into this channel :runner::bicyclist::swimmer:", false, false)
 	subheaderSection := slack.NewSectionBlock(subheaderText, nil, nil)
 
 	divider := slack.NewDividerBlock()
 
-	bodyText := slack.NewTextBlockObject("mrkdwn", "To be able to see your activity in this channel, you'll need to authorise the Cravack application to access your Strava account. You can do that by clicking the button below :point_down:", false, false)
+	bodyText := slack.NewTextBlockObject("mrkdwn", "For this to work, you'll need to authorise the Cravack application to access your Strava account. You can do that by clicking the button below :point_down:", false, false)
 	bodySection := slack.NewSectionBlock(bodyText, nil, nil)
 
 	// Authorise button
@@ -93,6 +93,22 @@ func (slashCommand *SlackSlashCommand) GetStravaConnectResponse(host string) (*s
 				authoriseActionBlock,
 			},
 		},
+	}
+
+	return &msg, nil
+}
+
+func (slashCommand *SlackSlashCommand) GetDeauthorizeCravackResponse(host string) (*slack.WebhookMessage, error) {
+	msg := slack.WebhookMessage{
+		Text: "Your data will no longer be posted to this channel, and your user data has been deleted from Cravack servers. You can reconnect to Cravack by running the command `/cravack connect`",
+	}
+
+	return &msg, nil
+}
+
+func (slashCommand *SlackSlashCommand) GetUnknownCommandResponse(host string) (*slack.WebhookMessage, error) {
+	msg := slack.WebhookMessage{
+		Text: "Sorry, it seems you ran a command I can't handle. You can interact with Cravack by running the commands `/cravack connect` or `/cravack disconnect`",
 	}
 
 	return &msg, nil
@@ -285,7 +301,7 @@ func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 	channel, ts, err := api.PostMessage(
 		user.SlackUser.ChannelID,
 		slack.MsgOptionText(
-			fmt.Sprintf("<@%s> has authorised Cravack to post to this channel. Welcome! :wave:", user.SlackUser.UserName),
+			fmt.Sprintf("<@%s> has authorised Cravack to post their activity data to this channel :muscle:", user.SlackUser.UserName),
 			false,
 		),
 		slack.MsgOptionAsUser(true),

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"os"
 
 	"github.com/go-playground/validator/v10"
@@ -49,6 +50,31 @@ func AuthenticateStravaUser(userAuthCode string) (*db.StravaUser, error) {
 	}
 
 	return &stravaResponse, nil
+}
+
+func DeauthorizeStravaForCravackUser(user *db.CravackUser) error {
+	client := http.DefaultClient
+	req, err := http.NewRequest("POST", "https://www.strava.com/oauth/deauthorize", nil)
+	if err != nil {
+		return err
+	}
+	q := req.URL.Query()
+	q.Add("access_token", user.StravaUser.AccessToken)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	httpResp, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return err
+	}
+	log.Println(string(httpResp))
+
+	return nil
 }
 
 // Fetch Strava refresh token from Strava API

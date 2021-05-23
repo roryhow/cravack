@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/pkg/errors"
 	"github.com/roryhow/cravack/db"
 )
 
@@ -31,7 +32,7 @@ func PutCravackUser(user *db.CravackUser) (*dynamodb.PutItemOutput, error) {
 	return output, err
 }
 
-func GetAuthenticatedUser(athleteID int) (*db.CravackUser, error) {
+func GetCravackUser(athleteID int) (*db.CravackUser, error) {
 	sess := session.Must(session.NewSession())
 	svc := dynamodb.New(sess)
 
@@ -57,6 +58,66 @@ func GetAuthenticatedUser(athleteID int) (*db.CravackUser, error) {
 	}
 
 	return &user, nil
+}
+
+func GetCravackUserBySlackID(slackUserID string) (*db.CravackUser, error) {
+	sess := session.Must(session.NewSession())
+	svc := dynamodb.New(sess)
+
+	result, err := svc.Scan(&dynamodb.ScanInput{
+		TableName: aws.String(os.Getenv("CRAVACK_USER_TABLE")),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":user": {
+				S: aws.String(slackUserID),
+			},
+		},
+		FilterExpression: aws.String("SlackUser.UserID = :user"),
+	})
+
+	if err != nil {
+		log.Printf("Error when fetching from database\n%s", err.Error())
+		return nil, err
+	}
+
+	if *result.Count < 1 {
+		return nil, errors.Errorf("No such user exists for slackID %s", slackUserID)
+	}
+
+	user := db.CravackUser{}
+	err = dynamodbattribute.UnmarshalMap(result.Items[0], &user)
+	if err != nil {
+		log.Printf("Error when unmarshalling result from DB into StravaUser\n%s", err.Error())
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func DeleteCravackUser(user *db.CravackUser) (*db.CravackUser, error) {
+	sess := session.Must(session.NewSession())
+	svc := dynamodb.New(sess)
+
+	result, err := svc.DeleteItem(&dynamodb.DeleteItemInput{
+		TableName: aws.String(os.Getenv("CRAVACK_EVENT_TABLE")),
+		Key: map[string]*dynamodb.AttributeValue{
+			"UserID": {
+				N: aws.String(strconv.Itoa(user.UserID)),
+			},
+		},
+		ReturnValues: aws.String("ALL_OLD"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	cravackUser := db.CravackUser{}
+	err = dynamodbattribute.UnmarshalMap(result.Attributes, &cravackUser)
+	if err != nil {
+		log.Printf("Error when unmarshalling result from DB into CravackUser\n%s", err.Error())
+		return nil, err
+	}
+
+	return &cravackUser, nil
 }
 
 func UpdateCravackStravaToken(refreshedUser *db.StravaRefreshToken, athleteID int) (*db.CravackUser, error) {

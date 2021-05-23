@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -28,14 +29,69 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	slashCommand := services.NewSlashCommandFromForm(&req.Form)
-	msg, _ := slashCommand.GetStravaConnectResponse(host[0])
+	text := strings.TrimSpace(slashCommand.Text)
 
-	response, _ := json.Marshal(msg)
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       string(response),
-		Headers:    map[string]string{"Content-Type": "application/json"},
-	}, nil
+	if text == "connect" {
+		msg, _ := slashCommand.GetStravaConnectResponse(host[0])
+		response, _ := json.Marshal(msg)
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       string(response),
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	} else if text == "disconnect" {
+		// Get user info from DB
+		cravackUser, err := services.GetCravackUserBySlackID(slashCommand.UserID)
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		// remove user information
+		_, err = services.DeleteCravackUser(cravackUser)
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		// deauthorise strava
+		err = services.DeauthorizeStravaForCravackUser(cravackUser)
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		// Get deauthorisation message
+		msg, err := slashCommand.GetDeauthorizeCravackResponse(host[0])
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		response, err := json.Marshal(msg)
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       string(response),
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	} else {
+		// We can't handle the command supplied
+		msg, err := slashCommand.GetUnknownCommandResponse(host[0])
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		response, err := json.Marshal(msg)
+		if err != nil {
+			return services.HandleErrorAndLambdaReturn(err, 500)
+		}
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: 200,
+			Body:       string(response),
+			Headers:    map[string]string{"Content-Type": "application/json"},
+		}, nil
+	}
 }
 
 func main() {
