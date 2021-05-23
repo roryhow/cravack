@@ -93,31 +93,19 @@ func GetCravackUserBySlackID(slackUserID string) (*db.CravackUser, error) {
 	return &user, nil
 }
 
-func DeleteCravackUser(user *db.CravackUser) (*db.CravackUser, error) {
+func DeleteCravackUser(user *db.CravackUser) error {
 	sess := session.Must(session.NewSession())
 	svc := dynamodb.New(sess)
 
-	result, err := svc.DeleteItem(&dynamodb.DeleteItemInput{
-		TableName: aws.String(os.Getenv("CRAVACK_EVENT_TABLE")),
+	_, err := svc.DeleteItem(&dynamodb.DeleteItemInput{
+		TableName: aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"UserID": {
 				N: aws.String(strconv.Itoa(user.UserID)),
 			},
 		},
-		ReturnValues: aws.String("ALL_OLD"),
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	cravackUser := db.CravackUser{}
-	err = dynamodbattribute.UnmarshalMap(result.Attributes, &cravackUser)
-	if err != nil {
-		log.Printf("Error when unmarshalling result from DB into CravackUser\n%s", err.Error())
-		return nil, err
-	}
-
-	return &cravackUser, nil
+	return err
 }
 
 func UpdateCravackStravaToken(refreshedUser *db.StravaRefreshToken, athleteID int) (*db.CravackUser, error) {

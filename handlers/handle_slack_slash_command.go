@@ -47,7 +47,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}
 
 		// remove user information
-		_, err = services.DeleteCravackUser(cravackUser)
+		err = services.DeleteCravackUser(cravackUser)
 		if err != nil {
 			return services.HandleErrorAndLambdaReturn(err, 500)
 		}

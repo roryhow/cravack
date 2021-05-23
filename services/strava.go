@@ -68,10 +68,7 @@ func DeauthorizeStravaForCravackUser(user *db.CravackUser) error {
 	}
 	defer resp.Body.Close()
 
-	httpResp, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		return err
-	}
+	httpResp, _ := httputil.DumpResponse(resp, true)
 	log.Println(string(httpResp))
 
 	return nil
