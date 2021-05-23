@@ -163,7 +163,7 @@ resources:
             Fn::GetAtt:
               - CravackActivityDeadLetterQueue
               - "Arn"
-        maxReceiveCount: 3
+          maxReceiveCount: 3
 
     CravackActivityDeadLetterQueue:
       Type: AWS::SQS::Queue
