@@ -298,7 +298,7 @@ func DeleteActivityMessage(event *db.CravackActivityEvent) error {
 func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
-	ts, err := api.PostEphemeral(
+	_, err := api.PostEphemeral(
 		user.SlackUser.ChannelID,
 		user.SlackUser.UserID,
 		slack.MsgOptionText(
@@ -313,10 +313,6 @@ func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 		return "", err
 	}
 
-	pp := &slack.PermalinkParameters{
-		Channel: user.SlackUser.ChannelID,
-		Ts:      ts,
-	}
-	permalink, err := api.GetPermalink(pp)
-	return permalink, err
+	return fmt.Sprintf("slack://channel?team=%s&id=%s", user.SlackUser.TeamID, user.SlackUser.ChannelID), err
+
 }
