@@ -120,7 +120,7 @@ func UpdateCravackStravaToken(refreshedUser *db.StravaRefreshToken, athleteID in
 
 	input := &dynamodb.UpdateItemInput{
 		ExpressionAttributeValues: expr,
-
+		TableName:                 aws.String(os.Getenv("CRAVACK_USER_TABLE")),
 		Key: map[string]*dynamodb.AttributeValue{
 			"UserID": {
 				N: aws.String(strconv.Itoa(athleteID)),
