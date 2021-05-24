@@ -298,10 +298,11 @@ func DeleteActivityMessage(event *db.CravackActivityEvent) error {
 func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 	api := slack.New(os.Getenv("SLACK_API_KEY"))
 
-	channel, ts, err := api.PostMessage(
+	ts, err := api.PostEphemeral(
 		user.SlackUser.ChannelID,
+		user.SlackUser.UserID,
 		slack.MsgOptionText(
-			fmt.Sprintf("<@%s> has authorised Cravack to post their activity data to this channel :muscle:", user.SlackUser.UserName),
+			fmt.Sprintf("Thanks <@%s>! Your Strava activity data will now get posted in this channel :muscle:", user.SlackUser.UserName),
 			false,
 		),
 		slack.MsgOptionAsUser(true),
@@ -313,7 +314,7 @@ func PostCravackAuthenticationSuccess(user *db.CravackUser) (string, error) {
 	}
 
 	pp := &slack.PermalinkParameters{
-		Channel: channel,
+		Channel: user.SlackUser.ChannelID,
 		Ts:      ts,
 	}
 	permalink, err := api.GetPermalink(pp)
