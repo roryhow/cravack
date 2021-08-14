@@ -21,7 +21,7 @@ type StravaUser struct {
 	RefreshToken  string `validate:"required"`
 	AccessToken   string `validate:"required"`
 	AthleteID     int    `validate:"required"`
-	Username      string `validate:"required"`
+	Username      string
 	FirstName     string
 	LastName      string
 	ProfileMedium string
