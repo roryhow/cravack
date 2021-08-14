@@ -67,6 +67,7 @@ func handleStravaEventMessage(message map[string]events.SQSMessageAttribute) err
 		if err != nil {
 			return err
 		}
+		stravaUser = cravackUser.StravaUser // update reference to Strava user
 	}
 
 	// Fetch the corresponding event from strava api
