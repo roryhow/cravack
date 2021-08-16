@@ -40,10 +40,10 @@ If you want to run this application for yourself, you will need the following:
 - [nvm](https://github.com/nvm-sh/nvm). The latest version of node doesn't work with serverless right now, so I am using node V14 LTS.
 
 You will also need to add parameters into your AWS parameter store in order for your application to work. These are the following:
-- /cravack/<environment>/slack-api-key
-- /cravack/<environment>/strava-client-id
-- /cravack/<environment>/strava-client-secret
-- /cravack/<environment>/strava-webhook-verify-token
+- `/cravack/<environment>/slack-api-key`
+- `/cravack/<environment>/strava-client-id`
+- `/cravack/<environment>/strava-client-secret`
+- `/cravack/<environment>/strava-webhook-verify-token`
 These are relatively self explanatory. You can find each of the values needed from the respective slack / strava apps that you create.
 
 You can then deploy this application by running `make`. It's that easy!
@@ -72,7 +72,7 @@ You can contribute to the development of Cravack in a few ways:
 
 ### Nice to have
 - [ ] Unit tests for business logic areas of the application
-- [ ] Proper dev environment, migrate actual users to production environment
+- [x] Proper dev environment, migrate actual users to production environment
 - [ ] Interaction to choose with bot which event types to post
 - [ ] Render images in slack messages, if uploaded in Strava activity
 - [ ] Interaction with bot to choose which data to post (organisation specific settings?)
